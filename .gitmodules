@@ -1,0 +1,3 @@
+[submodule "firmware/toolchain/pyupdi"]
+	path = firmware/toolchain/pyupdi
+	url = https://github.com/mraardvark/pyupdi.git

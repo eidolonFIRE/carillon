@@ -1,0 +1,9 @@
+Download and extract...
+
+// AVR 8-bit Toolchain 3.6.2 for Linux 64bit
+https://www.microchip.com/mymicrochip/filehandler.aspx?ddocname=en607660
+
+// AVR-dfp pack for attiny new family (attiny402)
+http://packs.download.atmel.com/Atmel.ATtiny_DFP.1.3.229.atpack
+
+

@@ -1,0 +1,15 @@
+*.hex
+*.map
+*.elf
+*.o
+*.d
+
+*.pyc
+
+
+firmware/toolchain/packs/*
+firmware/toolchain/avr*
+
+
+*.sublime-project
+*.sublime-workspace

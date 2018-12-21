@@ -1,0 +1,1 @@
+python ../toolchain/pyupdi/pyupdi.py -d tiny402 -c /dev/ttyUSB0 -f main.hex
