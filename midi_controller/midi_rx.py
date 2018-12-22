@@ -28,16 +28,15 @@ try:
     with mido.open_input(portname) as port:
         print('Using {}'.format(port))
         print('Waiting for messages...')
-        for message in port:
-            msg = vars(message)
+        for msg in port:
 
-            print(msg)
+            print(vars(msg))
 
-            if msg['type'] == 'note_on':
-                ring(msg['note'] - 48, msg['velocity'] >> 2)
+            if msg.type == 'note_on':
+                ring(msg.note - 48, msg.velocity >> 2)
 
-            elif msg['type'] == 'note_off':
-                damp(msg['note'] - 48, 8)
+            elif msg.type == 'note_off':
+                damp(msg.note - 48, 8)
 
 
 except KeyboardInterrupt:
