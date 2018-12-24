@@ -21,10 +21,7 @@
 
 struct _rx
 {
-	uint8_t flag;
-	uint8_t cmd;
-	uint8_t cmd_mode;
-	uint8_t value;
+	uint8_t mode;
 	uint8_t address;
 } rx;
 
@@ -36,11 +33,29 @@ void ioinit (void) {
 	// setup uart
 	USART0.BAUD = BAUD_Register_Value;
 	USART0.CTRLA |= USART_RXCIE_bm;
-	USART0.CTRLB |= USART_TXEN_bm | USART_RXEN_bm;
+	USART0.CTRLB |= USART_RXEN_bm;
 	
+	// setup timers
+	TCA0.SINGLE.INTCTRL |= TCA_SINGLE_OVF_bm;
+	TCA0.SINGLE.CTRLA |= (0x7 << 1);
+
 	// enable global interupts
 	CPU_SREG |= CPU_I_bm;
 }
+
+
+
+// Timer A finishes
+ISR(TCA0_OVF_vect) {	
+	// Clear the interrupt
+	TCA0.SINGLE.INTFLAGS = 0xff;
+	// halt and restart the timer
+	TCA0.SINGLE.CTRLA &= ~TCA_SINGLE_ENABLE_bm;
+	TCA0.SINGLE.CTRLECLR |= 0x2 << 2; 
+	// turn off the coil
+	PORTA.OUT &= ~PIN_CLAPPER;
+}
+
 
 
 // USART rx interrupt
@@ -71,15 +86,19 @@ ISR(USART0_RXC_vect) {
 	// get instruction type
 	if (value & 0x80) {
 		rx.address = value & 0x3F;
-		rx.cmd_mode = (value >> 6) & 0x1;
+		rx.mode = (value >> 6) & 0x1;
 	} else if (rx.address == ADDRESS) {
 		// only bother parsing commands to us
-		if (rx.cmd_mode) {
+		if (rx.mode) {
 			// TODO: configs
 		} else {
-			rx.flag = true;
-			rx.value = value & 0x1F;
-			rx.cmd = (value >> 5) & 0x3;
+			if ((value >> 5) & 0x3 == 0) {
+				// activate the coil
+				PORTA.OUT |= PIN_CLAPPER;
+				// start timer
+				TCA0.SINGLE.PER = (value & 0x1F) << 3;
+				TCA0.SINGLE.CTRLA |= TCA_SINGLE_ENABLE_bm;
+			}
 		}
 	}
 	// USART0.TXDATAL = rx;
@@ -89,35 +108,9 @@ ISR(USART0_RXC_vect) {
 
 int main (void) {
 	ioinit();
-
-	rx.flag = false;
 	rx.address = 0;
-
-
-
-
 	while(1) {
-
-
-		if (rx.flag) {
-			rx.flag = false;
-
-			if (rx.cmd == 0) {
-				// ring
-				PORTA.OUT |= PIN_CLAPPER;
-				for (int t = 0; t < rx.value; t++) {
-					_delay_ms(1);
-				}
-			} else if (rx.cmd == 1) {
-				// dampen
-				PORTA.OUT |= PIN_DAMPER;
-				_delay_ms(100);
-
-			}
-
-			PORTA.OUT &= 0xf0;
-		}
-		_delay_ms(10);
+		_delay_ms(20);
 	}
 	return (0);
 }
