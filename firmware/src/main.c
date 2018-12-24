@@ -39,6 +39,10 @@ void ioinit (void) {
 	TCA0.SINGLE.INTCTRL |= TCA_SINGLE_OVF_bm;
 	TCA0.SINGLE.CTRLA |= (0x7 << 1);
 
+	TCB0.CTRLA = TCB_CLKSEL_CLKTCA_gc;
+	TCB0.CTRLB = TCB_CNTMODE_SINGLE_gc;
+	TCB0.INTCTRL = 1;
+
 	// enable global interupts
 	CPU_SREG |= CPU_I_bm;
 }
@@ -56,6 +60,10 @@ ISR(TCA0_OVF_vect) {
 	PORTA.OUT &= ~PIN_CLAPPER;
 }
 
+
+ISR(TCB0_INT_vect) {
+	PORTA.OUT ^= PIN_DAMPER;
+}
 
 
 // USART rx interrupt
@@ -92,8 +100,12 @@ ISR(USART0_RXC_vect) {
 		if (rx.mode) {
 			// TODO: configs
 		} else {
-			if ((value >> 5) & 0x3 == 0) {
-				// activate the coil
+			if (((value >> 5) & 0x3) == 0) {
+				// Dampen Bell
+				TCB0.CTRLA |= TCB_ENABLE_bm;
+				TCB0.CCMP = 0xff;
+			} else {
+				// Ring Bell
 				PORTA.OUT |= PIN_CLAPPER;
 				// start timer
 				TCA0.SINGLE.PER = (value & 0x1F) << 3;
