@@ -52,6 +52,9 @@ try:
                         cur_max = msg.value
                     elif msg.control == 24 and msg.value > 0:
                         bells.config(cur_note, 0xFF, 0)
+                        sys.stdout.write(" -- PROGRAMMING EEPROM --            \r")
+                        sys.stdout.flush()
+                        continue
 
             sys.stdout.write("Note: {:3} |  min:{:3}  max:{:3}  \r".format(cur_note, cur_min, cur_max))
             sys.stdout.flush()

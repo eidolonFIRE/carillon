@@ -1,5 +1,13 @@
 import serial
 from time import time
+from enum import Enum
+
+
+class BellParam(Enum):
+    MIN_CLAP_VALUE = 0x01
+    MAX_CLAP_VALUE = 0x02
+    SET_ADDRESS = 0x03
+    COMMIT_EEPROM_DATA = 0xFF
 
 
 class BellsController(object):
@@ -47,6 +55,9 @@ class BellsController(object):
         self.tty.write(chr(value & 0x7F))
 
     ''' PUBLIC API '''
+
+    def set_address(self, new_note):
+        self._send_config(0x0, BellParam.SET_ADDRESS.value, new_note - self.midi_offset)
 
     def ring(self, note, velocity):
         self._send_note(note, (velocity >> 1) & 0x3F)

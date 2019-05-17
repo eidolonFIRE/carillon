@@ -5,10 +5,11 @@
 #include <util/delay.h>
 #include <avr/interrupt.h>
 
-#define BAUD_Rate 38400
+#define BAUD_RATE 38400
 #define PIN_CLAPPER 0x20
 #define PIN_DAMPER 0x8
 
+#define IS_SETUP_SIGNATURE 0xAAAA
 
 struct _rx {
 	uint8_t mode;
@@ -23,9 +24,10 @@ struct _config {
 } config;
 
 enum _eeprom_address {
-	E2_ADDR_MY_ADDRESS,
-	E2_ADDR_CLAPPER_MIN,
-	E2_ADDR_CLAPPER_MAX,
+	E2_ADDR_MY_ADDRESS = 0,
+	E2_ADDR_CLAPPER_MIN = 1,
+	E2_ADDR_CLAPPER_MAX = 2,
+	E2_ADDR_IS_SETUP_SIG = 3,
 };
 
 
@@ -40,7 +42,7 @@ void ioinit (void) {
 	PORTA.DIR = PIN_DAMPER | PIN_CLAPPER;
 
 	// setup uart
-	USART0.BAUD = ((32UL * F_CPU)/(16UL * BAUD_Rate));
+	USART0.BAUD = ((32UL * F_CPU)/(16UL * BAUD_RATE));
 	USART0.CTRLA |= USART_RXCIE_bm;
 	USART0.CTRLB |= USART_RXEN_bm;
 	
@@ -55,46 +57,48 @@ void ioinit (void) {
 }
 
 
-void write_eeprom_word(uint8_t address, uint16_t value) {
+void write_user_row_byte(uint8_t address, uint8_t value) {
 	// wait for status ready
-	// uint8_t timeout = 0;
-	// while (NVMCTRL.STATUS & NVMCTRL_EEBUSY_bm) {
-	// 	// BUSY!
-	// 	_delay_ms(1);
-	// 	timeout++;
-	// 	if (timeout >= 100) {
-	// 		// abort...
-	// 		return;
-	// 	}
-	// }
-	
-	// setup write command
-	// NVMCTRL.DATA = value;
-	// NVMCTRL.ADDR = EEPROM_START + address * 2;
-	(*((volatile uint16_t *)(EEPROM_START + address * 2))) = value;
+	uint8_t timeout = 0;
+	while (NVMCTRL.STATUS & NVMCTRL_EEBUSY_bm) {
+		// BUSY!
+		_delay_ms(1);
+		timeout++;
+		if (timeout >= 100) {
+			// abort...
+			return;
+		}
+	}
 
-	// disarm write-protection and write
+	// write to user EEPROM page
+	(*((volatile uint8_t *)(&USERROW + address * 2))) = value;
+
+	// disarm write-protection and execute write command
 	CPU_CCP = CCP_SPM_gc;
 	NVMCTRL.CTRLA = NVMCTRL_CMD_PAGEWRITE_gc;
 }
 
-void write_eeprom_byte(uint8_t address, uint8_t value) {
+
+uint8_t read_user_row_byte(uint8_t address) {
+	return *(uint8_t *)(&USERROW + address * 2);
+}
+
+
+void write_eeprom_word(uint8_t address, uint16_t value) {
 	// wait for status ready
-	// uint8_t timeout = 0;
-	// while (NVMCTRL.STATUS & NVMCTRL_EEBUSY_bm) {
-	// 	// BUSY!
-	// 	_delay_ms(1);
-	// 	timeout++;
-	// 	if (timeout >= 100) {
-	// 		// abort...
-	// 		return;
-	// 	}
-	// }
-	
+	uint8_t timeout = 0;
+	while (NVMCTRL.STATUS & NVMCTRL_EEBUSY_bm) {
+		// BUSY!
+		_delay_ms(1);
+		timeout++;
+		if (timeout >= 100) {
+			// abort...
+			return;
+		}
+	}
+
 	// setup write command
-	// NVMCTRL.DATA = value;
-	// NVMCTRL.ADDR = EEPROM_START + address * 2;
-	(*((volatile uint8_t *)(EEPROM_START + address * 2))) = value;
+	(*((volatile uint16_t *)(EEPROM_START + address * 2))) = value;
 
 	// disarm write-protection and write
 	CPU_CCP = CCP_SPM_gc;
@@ -103,10 +107,6 @@ void write_eeprom_byte(uint8_t address, uint8_t value) {
 
 uint16_t read_eeprom_word(uint8_t address) {
 	return *(uint16_t *)(EEPROM_START + address * 2);
-}
-
-uint8_t read_eeprom_byte(uint8_t address) {
-	return *(uint8_t *)(EEPROM_START + address * 2);
 }
 
 
@@ -135,7 +135,7 @@ ISR(USART0_RXC_vect) {
 				  0x00 = --reserved--
 				  0x01 = min clap value
 				  0x02 = max clap value
-				  0x03 = address
+				  0x03 = set address
 				  0xFF = commit EEPROM data
 
 			[1] 0-vvvvvvv : value(7)
@@ -159,16 +159,20 @@ ISR(USART0_RXC_vect) {
 					config.clapper_max = ((msg & 0x7F) << 1) + 0x18;
 				} else if (rx.param == 0x03) {
 					// set my_address
-					config.my_address = msg & 0x3F;
-				}
-			} else {
-				rx.param = msg & 0x7F;
-				if (rx.param == 0xFF) {
-					rx.param = 0;
+					if (read_eeprom_word(E2_ADDR_IS_SETUP_SIG) != IS_SETUP_SIGNATURE) {
+						// not setup yet, read address and save
+						config.my_address = msg & 0x3F;
+						write_user_row_byte(E2_ADDR_MY_ADDRESS, config.my_address);
+						// set signature flag so this can't happen again
+						write_eeprom_word(E2_ADDR_IS_SETUP_SIG, IS_SETUP_SIGNATURE);
+					}
+				} else if (rx.param == 0xFF) {
 					// write config to EEPROM
 					write_eeprom_word(E2_ADDR_CLAPPER_MIN, config.clapper_min);
 					write_eeprom_word(E2_ADDR_CLAPPER_MAX, config.clapper_max);
 				}	
+			} else {
+				rx.param = msg & 0x7F;
 			}
 
 		} else {
@@ -193,25 +197,23 @@ ISR(USART0_RXC_vect) {
 
 
 int main (void) {
-	// ENABLE THIS TO WRITE THE ADDRESS
-	// write_eeprom_byte(E2_ADDR_MY_ADDRESS, 12);
-
 	// load settings from eeprom
-	config.my_address = read_eeprom_byte(E2_ADDR_MY_ADDRESS);
+	if (read_eeprom_word(E2_ADDR_IS_SETUP_SIG) == IS_SETUP_SIGNATURE) {
+		config.my_address = read_user_row_byte(E2_ADDR_MY_ADDRESS);
+	} else {
+		config.my_address = 0;
+	}
 	config.clapper_min = read_eeprom_word(E2_ADDR_CLAPPER_MIN);
 	config.clapper_max = read_eeprom_word(E2_ADDR_CLAPPER_MAX);
 
-	// config.clapper_min = 26;
-	// config.clapper_max = 50 * 2 + 0x1F;
-	
 	// initial state
 	rx.address = 0;
 	rx.mode = 0;
 	rx.param = 0;
+
 	ioinit();
 	while(1) {
-		// global loop of nothing
-		// everything is handled by interrupts
+		// global loop of nothing, everything is handled by interrupts
 		_delay_ms(10);
 	}
 	return (0);
