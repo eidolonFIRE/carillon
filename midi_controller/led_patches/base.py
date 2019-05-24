@@ -1,5 +1,6 @@
 from enum import Enum
 import numpy as np
+from collections import deque
 
 
 def color_blend(A, B, ratio=0.5):
@@ -40,11 +41,12 @@ class base(object):
         self.reset()
 
     def reset(self):
+        self.events = deque()
         self.state = State.START
         self.loopCount = 0
 
-    def event(self, note, type, value):
-        pass
+    def event(self, event):
+        self.events.appendleft(event)
 
     def step(self, leds):
         self.loopCount += 1

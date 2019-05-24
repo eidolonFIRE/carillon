@@ -35,15 +35,15 @@ class BellsController(object):
 
     def _send_note(self, note, cmd):
         address = self._map_note(note)
-        self.tty.write(chr(0x80 | (address & 0x3F)))
-        self.tty.write(chr(cmd & 0x7F))
+        self.tty.write(bytes([0x80 | (address & 0x3F)]))
+        self.tty.write(bytes([cmd & 0x7F]))
 
     def _send_config(self, note, param, value):
         address = self._map_note(note)
         assert param > 0, "Param value 0x0 is reserved!"
-        self.tty.write(chr(0xC0 | (address & 0x3F)))
-        self.tty.write(chr(param & 0x7F))
-        self.tty.write(chr(value & 0x7F))
+        self.tty.write(bytes([0xC0 | (address & 0x3F)]))
+        self.tty.write(bytes([param & 0x7F]))
+        self.tty.write(bytes([value & 0x7F]))
 
     """ PUBLIC API """
 
@@ -56,7 +56,10 @@ class BellsController(object):
 
     def damp(self, note, duration=None):
         if duration is None:
-            duration = min(0x3F, max(4, int(0x3F - 10 * (time() - self.last_rung[note]))))
+            if note in self.last_rung.keys():
+                duration = min(0x3F, max(4, int(0x3F - 10 * (time() - self.last_rung[note]))))
+            else:
+                duration = 0
         self._send_note(note, 0x40 | (duration & 0x3F))
 
     def mortello(self, note, velocity):

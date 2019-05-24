@@ -60,31 +60,30 @@ class LedLayout(object):
     """ LED layout configurations """
     def __init__(self, config):
         """  Config  """
-        self._notes = np.array(config["note_array"]) - 1
-        self.leds_per_bell = int(config["leds_per_bell"])
+        self.notes_matrix = np.array(config["note_array"]) - 1
+        self.leds_per_note = int(config["leds_per_note"])
 
         """  LUTS  """
-        self.notes = self._notes.size
-        self.len = self.notes * self.leds_per_bell
-
+        self.len = self.notes_matrix.size * self.leds_per_note
+        print("length: " + str(self.len))
         # Note to Index
-        self.n2i = [0] * self._notes.size
+        self.n2i = [0] * self.notes_matrix.size
         # Index to Note
         self.i2n = [0] * self.len
         # Note to coordinate position
-        self.n2p = [0] * self._notes.size
+        self.n2p = [0] * self.notes_matrix.size
         # Position to Note
         self.p2n = {}
 
         self._build_LUTs()
 
     def _build_LUTs(self):
-        self.w = self._notes.shape[0]
-        self.h = self._notes.shape[1]
+        self.w = self.notes_matrix.shape[0]
+        self.h = self.notes_matrix.shape[1]
         for x in range(self.w):
             for y in range(self.h):
-                note = self._notes[x, y]
-                index = (x + y * self.w) * self.leds_per_bell
+                note = self.notes_matrix[x, y]
+                index = x * self.leds_per_note + y * self.w * self.leds_per_note
                 self.n2i[note] = index
                 self.i2n[index + 0] = note
                 self.i2n[index + 1] = note
@@ -98,7 +97,7 @@ class LightController(object):
     def __init__(self, config):
         super(LightController, self).__init__()
         self.leds = LedInterface(
-            np.array(config["note_array"]).size,
+            np.array(config["note_array"]).size * config["leds_per_note"],
             config["pin"],
             config["dma"],
             config["channel"]
@@ -114,6 +113,10 @@ class LightController(object):
                 each.step(self.leds)
         self.leds.flush()
 
+    def event(self, event):
+        for each in self.active_pats:
+            each.event(event)
+
     def start_patch(self, name, solo=True):
         ''' start a patch, stop all others '''
         if name in patch_classes.keys():
@@ -123,7 +126,7 @@ class LightController(object):
                     return
             # start the desired patch (no duplicates)
             self.active_pats.append(patch_classes[name](self.layout))
-            if solo and not self.active_pats[-1].one_shot:
+            if solo and not self.active_pats[-1].is_oneshot:
                 # stop all other patches
                 for each in self.active_pats:
                     if name != each.__class__.__name__:

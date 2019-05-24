@@ -2,7 +2,7 @@ from enum import Enum
 import pygame
 
 pygame.init()
-myDisplay = pygame.display.set_mode((700, 900), pygame.RESIZABLE)
+myDisplay = pygame.display.set_mode((800, 400), pygame.RESIZABLE)
 pygame.display.set_caption('Charity Tree Viz')
 
 myDisplay.fill((10, 10, 10))
@@ -33,8 +33,12 @@ class Adafruit_NeoPixel_viz(object):
 
     def show(self):
         for index, each in enumerate(self._led_data):
-            pos = ((index % 9) * 15 + 20, (index / 9) * 40 + 20, 5, 10)
-            pygame.draw.rect(myDisplay, Adafruit_NeoPixel_viz.color_to_tuple(each), pos)
+            rect = (
+                40 + (index % 3) * 22 + int(index / 9) * 80,
+                20 + int(index / 3) % 3 * 80 + int(index / 9) * 20,
+                20,
+                40)
+            pygame.draw.rect(myDisplay, Adafruit_NeoPixel_viz.color_to_tuple(each), rect)
         pygame.display.update()
 
     def setPixelColor(self, index, color):
