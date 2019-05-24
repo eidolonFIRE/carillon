@@ -12,25 +12,16 @@ class BellParam(Enum):
 
 class BellsController(object):
     """Hardware controller for Bells"""
-    def __init__(self,
-                 tty=None,
-                 num_bells=27,
-                 midi_offset=48):
+    def __init__(self, config):
         super(BellsController, self).__init__()
 
         # initial states
         self.last_rung = {}
-        self.num_bells = num_bells
-        self.midi_offset = midi_offset
+        self.num_bells = config["num_bells"]
+        self.midi_offset = config["midi_offset"]
 
         # open serial ouput
-        if tty:
-            self.tty = serial.Serial(tty, 38400)
-        else:
-            try:
-                self.tty = serial.Serial('/dev/ttyUSB1', 38400)
-            except:
-                self.tty = serial.Serial('/dev/ttyUSB2', 38400)
+        self.tty = serial.Serial(config["control_tty"], int(config["control_baud"]))
 
     def _map_note(self, note):
         # bell index from midi note
@@ -54,7 +45,7 @@ class BellsController(object):
         self.tty.write(chr(param & 0x7F))
         self.tty.write(chr(value & 0x7F))
 
-    ''' PUBLIC API '''
+    """ PUBLIC API """
 
     def set_address(self, new_note):
         self._send_config(0x0, BellParam.SET_ADDRESS.value, new_note - self.midi_offset)
