@@ -1,5 +1,5 @@
 from bells import BellsController
-from leds import LightController
+# from leds import LightController
 import sys
 import mido
 import threading
@@ -12,7 +12,7 @@ config = json.load(open('config.json', 'r'))
 
 # Spin up main objects
 bells = BellsController(config["Bells"])
-leds = LightController(config["Leds"])
+# leds = LightController(config["Leds"])
 
 
 
@@ -20,19 +20,19 @@ leds = LightController(config["Leds"])
 ALIVE = True
 
 
-def led_update_loop():
-    global ALIVE
-    global leds
-    print("Starting led_update_loop")
-    while ALIVE:
-        leds.step()
-        sleep(1.0 / 60)
+# def led_update_loop():
+#     global ALIVE
+#     global leds
+#     print("Starting led_update_loop")
+#     while ALIVE:
+#         leds.step()
+#         sleep(1.0 / 60)
 
 
-led_thread = threading.Thread(target=led_update_loop)
-led_thread.start()
+# led_thread = threading.Thread(target=led_update_loop)
+# led_thread.start()
 
-leds.start_patch("note_pulse")
+# leds.start_patch("note_pulse")
 
 if len(sys.argv) > 1:
     portname = sys.argv[1]
@@ -54,7 +54,7 @@ try:
                 bells.damp(msg.note)
 
             msg.note -= int(config["Bells"]["midi_offset"])
-            leds.event(msg)
+            # leds.event(msg)
 
 
 except KeyboardInterrupt:
@@ -63,4 +63,4 @@ except KeyboardInterrupt:
 ALIVE = False
 
 bells.close()
-led_thread.join()
+# led_thread.join()
