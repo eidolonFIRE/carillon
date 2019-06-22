@@ -4,7 +4,7 @@ import sys
 import mido
 import threading
 import json
-from time import sleep
+from time import sleep, time
 
 
 # LOAD CONFIG
@@ -39,26 +39,42 @@ if len(sys.argv) > 1:
 else:
     portname = "MPKmini2:MPKmini2 MIDI 1 24:0"  # Use default port
 
-try:
-    with mido.open_input(portname) as port:
-        print('Using {}'.format(port))
-        print('Waiting for messages...')
-        for msg in port:
 
+if len(sys.argv[2]):
+    # PLAY A MIDI FILE
+    try:
+        midifile = mido.MidiFile(sys.argv[2])
+        t0 = time()
+        for msg in midifile.play():
             print(vars(msg))
-
             if msg.type == 'note_on':
-                bells.ring(msg.note, msg.velocity)
-
+                bells.ring(msg.note, msg.velocity // 2)
             elif msg.type == 'note_off':
                 bells.damp(msg.note)
-
-            msg.note -= int(config["Bells"]["midi_offset"])
+            # msg.note -= int(config["Bells"]["midi_offset"])
             # leds.event(msg)
+        print('play time: {:.2f} s (expected {:.2f})'.format(time() - t0, midifile.length))
+    except KeyboardInterrupt:
+        pass
 
 
-except KeyboardInterrupt:
-    pass
+else:
+    # PLAY FROM KEYBOARD
+    try:
+        with mido.open_input(portname) as port:
+            print('Using {}'.format(port))
+            print('Waiting for messages...')
+            for msg in port:
+                print(vars(msg))
+                if msg.type == 'note_on':
+                    bells.ring(msg.note, msg.velocity // 2)
+                elif msg.type == 'note_off':
+                    bells.damp(msg.note)
+                # msg.note -= int(config["Bells"]["midi_offset"])
+                # leds.event(msg)
+    except KeyboardInterrupt:
+        pass
+
 
 ALIVE = False
 

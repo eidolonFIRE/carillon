@@ -24,7 +24,7 @@ main.elf: main.o
 	# clean up other files
 	rm -f *.d
 
-main.o: main.c
+main.o: main.c my_address.h
 	# compile code to .o
 	$(CC) -x c -funsigned-char -funsigned-bitfields -DNDEBUG  -I$(MCUPACK)/include  $(OPTIMIZE) -ffunction-sections -fdata-sections -fpack-struct -fshort-enums -Wall -mmcu=$(MCU_TARGET) -B $(MCUPACK)/gcc/dev/$(MCU_TARGET) -c -std=gnu99 -MD -MP -MF "$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -MT"$@" -o $@ $<
 

@@ -2,7 +2,7 @@
 	"Bells" : {
 		"num_bells": 27,
 		"midi_offset": 48,
-		"control_tty": "/dev/ttyS0",
+		"control_tty": "/dev/ttyUSB0",
 		"control_baud": 38400,
 		"program_tty": "None"
 	},

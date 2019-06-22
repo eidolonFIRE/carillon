@@ -1,9 +1,15 @@
 import sys
 from time import time
 import mido
+import json
 from bells import BellsController
 
-bells = BellsController()
+
+# LOAD CONFIG
+config = json.load(open('config.json', 'r'))
+
+# Spin up main objects
+bells = BellsController(config["Bells"])
 
 if len(sys.argv) > 1:
     portname = sys.argv[1]

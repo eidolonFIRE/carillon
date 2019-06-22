@@ -21,7 +21,7 @@ class BellsController(object):
         self.midi_offset = config["midi_offset"]
 
         # open serial ouput
-        self.tty = serial.Serial(config["control_tty"], int(config["control_baud"]))
+        self.tty = serial.Serial(config["control_tty"], int(config["control_baud"]), bytesize=8, parity='N', stopbits=1)
 
     def _map_note(self, note):
         # bell index from midi note
@@ -46,9 +46,6 @@ class BellsController(object):
         self.tty.write(bytes([value & 0x7F]))
 
     """ PUBLIC API """
-
-    def set_address(self, new_note):
-        self._send_config(0x0, BellParam.SET_ADDRESS.value, new_note - self.midi_offset)
 
     def ring(self, note, velocity):
         self._send_note(note, (velocity >> 1) & 0x3F)
