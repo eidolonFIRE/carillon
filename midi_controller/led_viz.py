@@ -35,7 +35,7 @@ class Adafruit_NeoPixel_viz(object):
         for index, each in enumerate(self._led_data):
             rect = (
                 40 + (index % 3) * 22 + int(index / 9) * 80,
-                20 + int(index / 3) % 3 * 80 + int(index / 9) * 20,
+                360 - (20 + int(index / 3) % 3 * 80 + int(index / 9) * 20),
                 20,
                 40)
             pygame.draw.rect(myDisplay, Adafruit_NeoPixel_viz.color_to_tuple(each), rect)

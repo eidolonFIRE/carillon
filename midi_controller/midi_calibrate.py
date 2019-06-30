@@ -43,7 +43,7 @@ try:
 
             elif msg.type == 'control_change' and cur_note:
                 # limit frequency of test rings
-                if time() - last_ring > 0.2 and prev_value != msg.value:
+                if time() - last_ring > 0.3 and prev_value != msg.value:
                     last_ring = time()
                     prev_value = msg.value
                     if msg.control == 1:

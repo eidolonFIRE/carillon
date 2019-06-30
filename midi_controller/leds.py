@@ -60,12 +60,11 @@ class LedLayout(object):
     """ LED layout configurations """
     def __init__(self, config):
         """  Config  """
-        self.notes_matrix = np.array(config["note_array"]) - 1
+        self.notes_matrix = np.array(config["note_array"])
         self.leds_per_note = int(config["leds_per_note"])
 
         """  LUTS  """
         self.len = self.notes_matrix.size * self.leds_per_note
-        print("length: " + str(self.len))
         # Note to Index
         self.n2i = [0] * self.notes_matrix.size
         # Index to Note
@@ -83,7 +82,7 @@ class LedLayout(object):
         for x in range(self.w):
             for y in range(self.h):
                 note = self.notes_matrix[x, y]
-                index = x * self.leds_per_note + y * self.w * self.leds_per_note
+                index = y * self.leds_per_note + x * self.h * self.leds_per_note
                 self.n2i[note] = index
                 self.i2n[index + 0] = note
                 self.i2n[index + 1] = note
