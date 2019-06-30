@@ -5,16 +5,14 @@ from time import time
 
 class rainbow(base):
     def __init__(self, layout):
-        self.strip_order = list(range(layout.len))
         super(rainbow, self).__init__(layout)
-
-    def reset(self):
-        self.i = 0
+        self.strip_order = list(range(layout.len))
         shuffle(self.strip_order)
+        self.i = 0
 
     def _step(self, state, leds):
         for t in range(10):
-            if self.i >= self.len:
+            if self.i >= self.lut.len:
                 self.i = 0
                 if state == State.START:
                     return State.RUNNING

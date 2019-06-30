@@ -35,7 +35,7 @@ def led_update_loop():
 led_thread = threading.Thread(target=led_update_loop)
 led_thread.start()
 
-leds.start_patch("note_pulse")
+leds.start_patch("rainbow")
 
 if len(sys.argv) > 1:
     portname = sys.argv[1]
