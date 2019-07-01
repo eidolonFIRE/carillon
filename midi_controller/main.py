@@ -29,13 +29,15 @@ def led_update_loop():
     print("Starting led_update_loop")
     while ALIVE:
         leds.step()
-        sleep(1.0 / 60)
+        sleep(1.0 / 80)
 
 
 led_thread = threading.Thread(target=led_update_loop)
 led_thread.start()
 
-leds.start_patch("rainbow")
+leds.start_patch("fade_to_rainbow")
+leds.start_patch("note_pulse_color", one_led=True)
+leds.start_patch("bell_swirl")
 
 if len(sys.argv) > 1:
     portname = sys.argv[1]

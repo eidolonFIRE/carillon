@@ -116,7 +116,12 @@ class LightController(object):
         for each in self.active_pats:
             each.event(event)
 
-    def start_patch(self, name, solo=True):
+    def stop_patch(self, name):
+        for each in self.active_pats:
+            if name == each.__class__.__name__:
+                each.state = State.STOP
+
+    def start_patch(self, name, solo=False, **kwargs):
         ''' start a patch, stop all others '''
         if name in patch_classes.keys():
             for each in self.active_pats:
@@ -124,7 +129,7 @@ class LightController(object):
                     # patch already running!
                     return
             # start the desired patch (no duplicates)
-            self.active_pats.append(patch_classes[name](self.layout))
+            self.active_pats.append(patch_classes[name](self.layout, **kwargs))
             if solo and not self.active_pats[-1].is_oneshot:
                 # stop all other patches
                 for each in self.active_pats:
