@@ -5,11 +5,11 @@
 *.d
 
 *.pyc
-
+*.json
 
 firmware/toolchain/packs/*
 firmware/toolchain/avr*
-
+midi_controller/ledlib
 
 *.sublime-project
 *.sublime-workspace
