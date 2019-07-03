@@ -7,6 +7,7 @@
 *.pyc
 *.json
 
+my_address.h
 firmware/toolchain/packs/*
 firmware/toolchain/avr*
 midi_controller/ledlib

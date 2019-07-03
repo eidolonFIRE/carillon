@@ -9,14 +9,26 @@
 #define BAUD_RATE 38400
 #define PIN_CLAPPER 0x20
 #define PIN_DAMPER 0x8
+#define E2_COMMIT_KEY 0x1D
 
-#define E2_ADDR_CLAPPER_MIN 1
-#define E2_ADDR_CLAPPER_MAX 2
+enum e2_table {
+	E2_ADDR_CLAPPER_MIN,
+	E2_ADDR_CLAPPER_MAX,
+};
+
+enum rx_commands {
+	CMD_RESERVED = 0x0,
+	CMD_RING = 0x1,
+	CMD_RING_M = 0x2,
+	CMD_DAMP = 0x3,
+	CMD_SET_CLAPPER_MIN = 0x10,
+	CMD_SET_CLAPPER_MAX = 0x20,
+	CMD_COMMIT_E2 = 0x30,
+};
 
 struct _rx {
-	uint8_t mode;
-	uint8_t address;
-	uint8_t param;
+	uint8_t addr;
+	uint8_t cmd;
 } rx;
 
 struct _config {
@@ -88,80 +100,88 @@ ISR(TCA0_OVF_vect) {
 }
 
 
+void ring_bell(uint8_t velocity, uint8_t mortello) {
+	if (!mortello) {
+		// force damper off
+		PORTA.OUT &= ~PIN_DAMPER;
+	}
+	// clap bell using Timer B
+	TCB0.CCMP = config.clapper_min + (velocity * config.clapper_max);
+	TCB0.CNT = 0;
+	TCB0.CTRLA |= TCB_ENABLE_bm;
+}
+
+
+void dampen_bell(uint8_t duration) {
+	// dampen bell
+	PORTA.OUT |= PIN_DAMPER;
+	// start timer
+	TCA0.SINGLE.CTRLECLR |= TCA_SINGLE_CMD1_bm; 
+	TCA0.SINGLE.PER = duration << 4;
+	TCA0.SINGLE.CTRLA |= TCA_SINGLE_ENABLE_bm;
+}
+
+
+void process_rx(uint8_t addr, uint8_t cmd, uint8_t value) {
+	switch (cmd) {
+		case CMD_RING:
+			ring_bell(value, 0);
+			break;
+		case CMD_RING_M:
+			ring_bell(value, 1);
+			break;
+		case CMD_DAMP:
+			dampen_bell(value);
+			break;
+		case CMD_SET_CLAPPER_MIN:
+			config.clapper_min = value << 4;
+			break;
+		case CMD_SET_CLAPPER_MAX:
+			config.clapper_max = value + 0x16;
+			break;
+		case CMD_COMMIT_E2:
+			if (value == E2_COMMIT_KEY) {
+				write_eeprom_word(E2_ADDR_CLAPPER_MIN, config.clapper_min);
+				write_eeprom_word(E2_ADDR_CLAPPER_MAX, config.clapper_max);
+			}
+			break;
+		default:
+			// Invalid command!
+			return;
+	}
+}
+
+
 ISR(USART0_RXC_vect) {
-	/*==================( RX protocol )==================
-		1-m-aaaaaa : mode(1),  address(6)
-
-		Mode 0:
-			0-c-vvvvvv : cmd(1), value(6)
-				cmd 0 = Ring
-				cmd 1 = Damp
-
-		Mode 1:  -- MULTI BYTE --
-			[0] 0-ppppppp : parameter(7)
-				  0x00 = --reserved--
-				  0x01 = min clap value
-				  0x02 = max clap value
-				  0xFF = commit EEPROM data
-
-			[1] 0-vvvvvvv : value(7)
+	/*===============( 3-byte RX protocol )===============
+		[0] 1-aaaaaaa : addr(7)
+		[1] 0-ppppppp : cmd(7)  ...see enum
+		[2] 0-vvvvvvv : value(7)
 	=====================================================*/
 	uint8_t msg = USART0.RXDATAL;
-
-	// get instruction type
 	if (msg & 0x80) {
-		rx.address = msg & 0x3F;
-		rx.mode = msg & 0x40;
-		rx.param = 0;
-	} else if (rx.address == MY_ADDRESS) {
-		if (rx.mode) {
-			if (rx.param) {
-				if (rx.param == 0x01) {
-					// set clapper min power
-					config.clapper_min = (msg & 0x7F) << 4;
-				} else if (rx.param == 0x02) {
-					// set clapper max power
-					config.clapper_max = ((msg & 0x7F) << 1) + 0x16;
-				} else if (rx.param == 0xFF) {
-					// write config to EEPROM
-					write_eeprom_word(E2_ADDR_CLAPPER_MIN, config.clapper_min);
-					write_eeprom_word(E2_ADDR_CLAPPER_MAX, config.clapper_max);
-				}	
-			} else {
-				rx.param = msg & 0x7F;
-			}
-
+		rx.addr = msg & 0x3F;
+		rx.cmd = 0;
+	} else {
+		if (rx.cmd) {
+			process_rx(rx.addr, rx.cmd, msg & 0x7F);
+			rx.addr = 0xFF;
+			rx.cmd = 0x0;
 		} else {
-			if (msg & 0x40) {
-				// dampen bell
-				PORTA.OUT |= PIN_DAMPER;
-				// start timer
-				TCA0.SINGLE.CTRLECLR |= 0x2 << 2; 
-				TCA0.SINGLE.PER = (msg & 0x3F) << 4; // 0x2ff;
-				TCA0.SINGLE.CTRLA |= TCA_SINGLE_ENABLE_bm;
-			} else {
-				// force damper off
-				PORTA.OUT &= ~PIN_DAMPER;
-				// clap bell using Timer B
-				TCB0.CCMP = config.clapper_min + ((msg & 0x3F) * config.clapper_max);
-				TCB0.CNT = 0;
-				TCB0.CTRLA |= TCB_ENABLE_bm;
-			}
+			rx.cmd = msg & 0x7F;
 		}
 	}
 }
 
 
-int main (void) {
-
+int main(void) {
 	// load config
 	config.clapper_min = read_eeprom_word(E2_ADDR_CLAPPER_MIN);
 	config.clapper_max = read_eeprom_word(E2_ADDR_CLAPPER_MAX);
 
 	// initial state
-	rx.address = 0;
-	rx.mode = 0;
-	rx.param = 0;
+	rx.addr = 0xFF;
+	rx.cmd = 0;
 
 	ioinit();
 	while(1) {

@@ -3,11 +3,14 @@ from time import time
 from enum import Enum
 
 
-class BellParam(Enum):
-    MIN_CLAP_VALUE = 0x01
-    MAX_CLAP_VALUE = 0x02
-    SET_ADDRESS = 0x03
-    COMMIT_EEPROM_DATA = 0xFF
+class BellCommand(Enum):
+    RESERVED = 0x0
+    RING = 0x1
+    RING_M = 0x2
+    DAMP = 0x3
+    SET_CLAPPER_MIN = 0x10
+    SET_CLAPPER_MAX = 0x20
+    COMMIT_E2 = 0x30
 
 
 class BellsController(object):
@@ -23,7 +26,13 @@ class BellsController(object):
         # open serial ouput
         self.tty = serial.Serial(config["control_tty"], int(config["control_baud"]), bytesize=8, parity='N', stopbits=1)
 
-    def _map_note(self, note):
+    def _tx(self, address, cmd, value):
+        assert cmd is not 0x0, "Command value 0x0 is reserved!"
+        self.tty.write(bytes([0xC0 | (address & 0x3F), cmd.value & 0x7F, value & 0x7F]))
+
+    """ -------------------------- PUBLIC API -------------------------- """
+
+    def map_note(self, note):
         # bell index from midi note
         address = note - self.midi_offset
         # wrap note into supported octaves
@@ -33,37 +42,30 @@ class BellsController(object):
             address -= 12
         return address
 
-    def _send_note(self, note, cmd):
-        address = self._map_note(note) + 1
-        self.tty.write(bytes([0x80 | (address & 0x3F), cmd & 0x7F]))
-
-    def _send_config(self, note, param, value):
-        address = self._map_note(note) + 1
-        assert param > 0, "Param value 0x0 is reserved!"
-        self.tty.write(bytes([0xC0 | (address & 0x3F), param & 0x7F, value & 0x7F]))
-
-    """ PUBLIC API """
-
     def ring(self, note, velocity):
-        self._send_note(note, (velocity >> 1) & 0x3F)
+        self._tx(self.map_note(note), BellCommand.RING.value, velocity)
         self.last_rung[note] = time()
 
     def damp(self, note, duration=None):
         if duration is None:
             if note in self.last_rung.keys():
-                # duration = min(0x3F, max(12, int(0x3F - 10 * (time() - self.last_rung[note]))))
-                duration = min(0x1F, max(12, int(0x1F - 10 * (time() - self.last_rung[note]))))
+                duration = min(0x1F, max(0xC, int(0x1F - 8 * (time() - self.last_rung[note]))))
             else:
                 duration = 0
-        self._send_note(note, 0x40 | (duration & 0x3F))
+        self._tx(self.map_note(note), BellCommand.DAMP.value, 0x40 + duration)
 
     def mortello(self, note, velocity):
-        self.damp(note, duration=10)
-        self.ring(note, velocity)
-        self.damp(note, duration=10)
+        self.damp(note, duration=0xF)
+        self._tx(self.map_note(note), BellCommand.RING_M.value, velocity)
 
-    def config(self, note, param, value):
-        self._send_config(note, param, value)
+    def set_clapper_min(self, note, value):
+        self._tx(self.map_note(note), BellCommand.SET_CLAPPER_MIN.value, value)
+
+    def set_clapper_max(self, note, value):
+        self._tx(self.map_note(note), BellCommand.SET_CLAPPER_MAX.value, value)
+
+    def commit_eeprom(self, note):
+        self._tx(self.map_note(note), BellCommand.COMMIT_E2.value, 0x1D)
 
     def close(self):
         self.tty.close()
