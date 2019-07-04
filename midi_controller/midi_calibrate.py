@@ -75,7 +75,7 @@ try:
             if msg.type == 'note_on':
                 if msg.note != cur_note:
                     # select new note to config
-                    cur_note = int(msg.note)
+                    cur_note = bells.map_note(msg.note)
                     cur_min = 0
                     cur_max = 0
                 bells.ring(cur_note, msg.velocity)
@@ -107,7 +107,7 @@ try:
                         bells.commit_eeprom(cur_note)
                         saved.add(cur_note)
 
-            print(cl.bold + cl.f.lightgrey + "Note - Min - Max")
+            print(cl.bold + cl.f.lightgrey + "\nNote - Min - Max")
             for note in list(range(27)):
                 if note == cur_note:
                     string = cl.bold
