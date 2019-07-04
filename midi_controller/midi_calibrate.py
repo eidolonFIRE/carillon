@@ -107,7 +107,7 @@ try:
                         bells.commit_eeprom(cur_note)
                         saved.add(cur_note)
 
-            print(cl.bold + cl.lightgrey + "Note - Min - Max")
+            print(cl.bold + cl.f.lightgrey + "Note - Min - Max")
             for note in list(range(27)):
                 if note == cur_note:
                     string = cl.bold
