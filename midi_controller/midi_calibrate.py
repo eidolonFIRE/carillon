@@ -55,8 +55,6 @@ class cl:
 
 
 cur_note = -1
-cur_min = 0
-cur_max = 0
 prev_value = 0
 last_ring = time()
 
@@ -73,11 +71,10 @@ try:
             # print(vars(msg))
 
             if msg.type == 'note_on':
-                if bells.map_note(msg.note) != cur_note:
+                if msg.note != cur_note:
                     # select new note to config
-                    cur_note = bells.map_note(msg.note)
-                    cur_min = 0
-                    cur_max = 0
+                    cur_note = msg.note
+
                 bells.ring(cur_note, msg.velocity)
                 last_ring = time()
 
@@ -90,7 +87,6 @@ try:
                         # set clapper min power
                         bells.set_clapper_min(cur_note, msg.value)
                         bells.ring(cur_note, 0)
-                        cur_min = msg.value
                         note_min[cur_note] = msg.value
                         if cur_note in saved:
                             saved.remove(cur_note)
@@ -98,7 +94,6 @@ try:
                         # set clapper max power
                         bells.set_clapper_max(cur_note, msg.value)
                         bells.ring(cur_note, 127)
-                        cur_max = msg.value
                         note_max[cur_note] = msg.value
                         if cur_note in saved:
                             saved.remove(cur_note)
@@ -108,7 +103,7 @@ try:
                         saved.add(cur_note)
 
             print(cl.bold + cl.f.lightgrey + "\nNote - Min - Max")
-            for note in list(range(27)):
+            for note in range(bells.midi_offset, bells.midi_offset + 27):
                 if note == cur_note:
                     string = cl.bold
                 else:
