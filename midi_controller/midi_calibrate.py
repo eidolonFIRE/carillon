@@ -39,7 +39,7 @@ try:
                     bells.ring(cur_note, msg.velocity)
                 else:
                     # select new note to config
-                    cur_note = msg.note
+                    cur_note = int(msg.note)
                     cur_min = 0
                     cur_max = 0
                 last_ring = time()
@@ -67,7 +67,7 @@ try:
 
                 print("Note - Min - Max")
                 for note in range(27):
-                    print("{:3} - {:3} - {:3}".format(note, note_min.get(note, "-"), note_max.get(note, "-")))
+                    print("{:3}) - {:3} - {:3}".format(note, note_min.get(note, ""), note_max.get(note, "")))
 
 
 except KeyboardInterrupt:
