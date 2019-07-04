@@ -122,7 +122,7 @@ void dampen_bell(uint8_t duration) {
 }
 
 
-void process_rx(uint8_t addr, uint8_t cmd, uint8_t value) {
+void process_rx(uint8_t cmd, uint8_t value) {
 	switch (cmd) {
 		case CMD_RING:
 			ring_bell(value, 0);
@@ -164,7 +164,9 @@ ISR(USART0_RXC_vect) {
 		rx.cmd = 0;
 	} else {
 		if (rx.cmd) {
-			process_rx(rx.addr, rx.cmd, msg & 0x7F);
+			if (rx.addr == MY_ADDRESS) {
+				process_rx(rx.cmd, msg & 0x7F);
+			}
 			rx.addr = 0xFF;
 			rx.cmd = 0x0;
 		} else {

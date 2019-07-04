@@ -67,7 +67,7 @@ try:
 
                 print("Note - Min - Max")
                 for note in range(27):
-                    print("{:3} - {3} - {:3}".format(cur_note, cur_min, cur_max))
+                    print("{:3} - {:3} - {:3}".format(cur_note, cur_min, cur_max))
 
 
 except KeyboardInterrupt:
