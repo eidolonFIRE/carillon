@@ -18,5 +18,7 @@ while True:
     # compile with new address
     os.system("make")
 
+    print("Flashing...")
+
     # flash to chip
     os.system("./flash.sh")

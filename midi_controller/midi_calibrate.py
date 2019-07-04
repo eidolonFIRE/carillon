@@ -23,6 +23,9 @@ cur_max = 0
 prev_value = 0
 last_ring = time()
 
+note_min = {}
+note_max = {}
+
 try:
     with mido.open_input(portname) as port:
         print('Using {}\n'.format(port))
@@ -47,23 +50,24 @@ try:
                     last_ring = time()
                     prev_value = msg.value
                     if msg.control == 1:
-                        bells.config(cur_note, msg.control, msg.value)
                         # set clapper min power
+                        bells.set_clapper_min(cur_note, msg.value)
                         bells.ring(cur_note, 0)
                         cur_min = msg.value
+                        note_min[cur_note] = msg.value
                     elif msg.control == 2:
-                        bells.config(cur_note, msg.control, msg.value)
                         # set clapper max power
+                        bells.set_clapper_max(cur_note, msg.value)
                         bells.ring(cur_note, 127)
                         cur_max = msg.value
+                        note_max[cur_note] = msg.value
                     elif msg.control == 24 and msg.value > 0:
-                        bells.config(cur_note, 0xFF, 0)
-                        sys.stdout.write(" -- PROGRAMMING EEPROM --            \r")
-                        sys.stdout.flush()
-                        continue
+                        # SAVE to eeprom
+                        bells.commit_eeprom(cur_note)
 
-            sys.stdout.write("Note: {:3} |  min:{:3}  max:{:3}  \r".format(cur_note, cur_min, cur_max))
-            sys.stdout.flush()
+                print("Note - Min - Max")
+                for note in range(27):
+                    print("{:3} - {3} - {:3}".format(cur_note, cur_min, cur_max))
 
 
 except KeyboardInterrupt:
