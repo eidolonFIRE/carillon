@@ -27,8 +27,8 @@ class BellsController(object):
         self.tty = serial.Serial(config["control_tty"], int(config["control_baud"]), bytesize=8, parity='N', stopbits=1)
 
     def _tx(self, address, cmd, value):
-        assert cmd is not 0x0, "Command value 0x0 is reserved!"
-        self.tty.write(bytes([0xC0 | (address & 0x3F), cmd & 0x7F, value & 0x7F]))
+        assert cmd.value is not 0x0, "Command value 0x0 is reserved!"
+        self.tty.write(bytes([0xC0 | (address & 0x3F), cmd.value & 0x7F, value & 0x7F]))
 
     """ -------------------------- PUBLIC API -------------------------- """
 
