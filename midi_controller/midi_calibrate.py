@@ -73,7 +73,7 @@ try:
             # print(vars(msg))
 
             if msg.type == 'note_on':
-                if msg.note != cur_note:
+                if bells.map_note(msg.note) != cur_note:
                     # select new note to config
                     cur_note = bells.map_note(msg.note)
                     cur_min = 0
