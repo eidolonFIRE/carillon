@@ -54,7 +54,7 @@ class cl:
         lightgrey = '\033[47m'
 
 
-cur_note = 0
+cur_note = -1
 cur_min = 0
 cur_max = 0
 prev_value = 0

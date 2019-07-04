@@ -67,7 +67,7 @@ if len(sys.argv) > 2 and len(sys.argv[2]):
                 pass
 
             if hasattr(msg, "note"):
-                msg.note = bells._map_note(msg.note)
+                msg.note = bells.map_note(msg.note)
                 leds.event(msg)
     except KeyboardInterrupt:
         pass
@@ -90,7 +90,7 @@ else:
                     bells.damp(msg.note)
                     # pass
                 if hasattr(msg, "note"):
-                    msg.note = bells._map_note(msg.note)
+                    msg.note = bells.map_note(msg.note)
                     leds.event(msg)
     except KeyboardInterrupt:
         pass

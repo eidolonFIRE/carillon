@@ -52,7 +52,7 @@ class BellsController(object):
                 duration = min(0x1F, max(0xC, int(0x1F - 8 * (time() - self.last_rung[note]))))
             else:
                 duration = 0
-        self._tx(self.map_note(note), BellCommand.DAMP, 0x40 + duration)
+        self._tx(self.map_note(note), BellCommand.DAMP, duration)
 
     def mortello(self, note, velocity):
         self.damp(note, duration=0xF)
