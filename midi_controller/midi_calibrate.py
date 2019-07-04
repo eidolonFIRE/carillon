@@ -17,6 +17,43 @@ else:
     portname = None  # Use default port
 
 
+class cl:
+    reset = '\033[0m'
+    bold = '\033[01m'
+    disable = '\033[02m'
+    underline = '\033[04m'
+    reverse = '\033[07m'
+    strikethrough = '\033[09m'
+    invisible = '\033[08m'
+
+    class f:
+        black = '\033[30m'
+        red = '\033[31m'
+        green = '\033[32m'
+        orange = '\033[33m'
+        blue = '\033[34m'
+        purple = '\033[35m'
+        cyan = '\033[36m'
+        lightgrey = '\033[37m'
+        darkgrey = '\033[90m'
+        lightred = '\033[91m'
+        lightgreen = '\033[92m'
+        yellow = '\033[93m'
+        lightblue = '\033[94m'
+        pink = '\033[95m'
+        lightcyan = '\033[96m'
+
+    class b:
+        black = '\033[40m'
+        red = '\033[41m'
+        green = '\033[42m'
+        orange = '\033[43m'
+        blue = '\033[44m'
+        purple = '\033[45m'
+        cyan = '\033[46m'
+        lightgrey = '\033[47m'
+
+
 cur_note = 0
 cur_min = 0
 cur_max = 0
@@ -26,6 +63,8 @@ last_ring = time()
 note_min = {}
 note_max = {}
 
+saved = set()
+
 try:
     with mido.open_input(portname) as port:
         print('Using {}\n'.format(port))
@@ -34,14 +73,12 @@ try:
             # print(vars(msg))
 
             if msg.type == 'note_on':
-                if msg.note == cur_note:
-                    # test ring note
-                    bells.ring(cur_note, msg.velocity)
-                else:
+                if msg.note != cur_note:
                     # select new note to config
                     cur_note = int(msg.note)
                     cur_min = 0
                     cur_max = 0
+                bells.ring(cur_note, msg.velocity)
                 last_ring = time()
 
             elif msg.type == 'control_change' and cur_note:
@@ -55,19 +92,34 @@ try:
                         bells.ring(cur_note, 0)
                         cur_min = msg.value
                         note_min[cur_note] = msg.value
+                        if cur_note in saved:
+                            saved.remove(cur_note)
                     elif msg.control == 2:
                         # set clapper max power
                         bells.set_clapper_max(cur_note, msg.value)
                         bells.ring(cur_note, 127)
                         cur_max = msg.value
                         note_max[cur_note] = msg.value
+                        if cur_note in saved:
+                            saved.remove(cur_note)
                     elif msg.control == 24 and msg.value > 0:
                         # SAVE to eeprom
                         bells.commit_eeprom(cur_note)
+                        saved.add(cur_note)
 
-                print("Note - Min - Max")
-                for note in range(27):
-                    print("{:3}) - {:3} - {:3}".format(note, note_min.get(note, ""), note_max.get(note, "")))
+            print(cl.bold + cl.lightgrey + "Note - Min - Max")
+            for note in list(range(27)):
+                if note == cur_note:
+                    string = cl.bold
+                else:
+                    string = cl.reset
+
+                if note in saved:
+                    string += cl.f.lightgreen
+                else:
+                    string += cl.f.lightgrey
+                string += "{:3}) - {:3} - {:3}".format(note, note_min.get(note, ""), note_max.get(note, ""))
+                print(string)
 
 
 except KeyboardInterrupt:
