@@ -35,19 +35,17 @@ class State(Enum):
 
 class base(object):
     """  Base LED patch  """
-    def __init__(self, layout):
+    def __init__(self, layout, kwargs):
         self.lut = layout
-        self.is_oneshot = False
-        self.reset()
-
-    def reset(self):
         self.events = deque()
         self.state = State.START
-        self.loopCount = 0
+        self.range = kwargs.get("range", (0, 100))
+        self.one_led = kwargs.get("one_led", False)
 
     def event(self, event):
-        self.events.appendleft(event)
+        # filter range
+        if self.range[0] <= event.note <= self.range[1]:
+            self.events.appendleft(event)
 
     def step(self, leds):
-        self.loopCount += 1
         self.state = self._step(self.state, leds) or self.state

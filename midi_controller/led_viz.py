@@ -43,3 +43,6 @@ class Adafruit_NeoPixel_viz(object):
 
     def setPixelColor(self, index, color):
         self._led_data[index] = color
+
+    def close(self):
+        pygame.quit()

@@ -4,11 +4,9 @@ import numpy as np
 
 
 class off(base):
-    def __init__(self, layout):
+    def __init__(self, layout, **kwargs):
         self.strip_order = list(range(layout.len))
-        super(off, self).__init__(layout)
-
-    def reset(self):
+        super(off, self).__init__(layout, kwargs)
         shuffle(self.strip_order)
         self.i = 0
 

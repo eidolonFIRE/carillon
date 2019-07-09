@@ -2,6 +2,7 @@ import importlib
 from led_patches.base import State
 import os
 import numpy as np
+import re
 
 
 # detect and load patches
@@ -56,55 +57,30 @@ class LedInterface(object):
         self.buffer[idx] = value
 
 
-class LedLayout(object):
-    """ LED layout configurations """
-    def __init__(self, config):
-        """  Config  """
-        self.notes_matrix = np.array(config["note_array"])
-        self.leds_per_note = int(config["leds_per_note"])
-
-        """  LUTS  """
-        self.len = self.notes_matrix.size * self.leds_per_note
-        # Note to Index
-        self.n2i = [0] * self.notes_matrix.size
-        # Index to Note
-        self.i2n = [0] * self.len
-        # Note to coordinate position
-        self.n2p = [0] * self.notes_matrix.size
-        # Position to Note
-        self.p2n = {}
-
-        self._build_LUTs()
-
-    def _build_LUTs(self):
-        self.w = self.notes_matrix.shape[0]
-        self.h = self.notes_matrix.shape[1]
-        for x in range(self.w):
-            for y in range(self.h):
-                note = self.notes_matrix[x, y]
-                index = y * self.leds_per_note + x * self.h * self.leds_per_note
-                self.n2i[note] = index
-                self.i2n[index + 0] = note
-                self.i2n[index + 1] = note
-                self.i2n[index + 2] = note
-                self.n2p[note] = (x, y)
-                self.p2n[(x, y)] = note
-
-
 class LightController(object):
     """  Manage active led Patches """
     def __init__(self, config):
         super(LightController, self).__init__()
+        self.config = config
         self.leds = LedInterface(
-            np.array(config["note_array"]).size * config["leds_per_note"],
-            config["pin"],
-            config["dma"],
-            config["channel"]
+            np.array(config["Leds"]["note_array"]).size * config["Leds"]["leds_per_note"],
+            config["Leds"]["pin"],
+            config["Leds"]["dma"],
+            config["Leds"]["channel"]
         )
-        self.layout = LedLayout(config)
         self.active_pats = []
 
+    def close(self):
+        if hasattr(self.leds._hw, "close"):
+            self.leds._hw.close()
+
+    def print_active_pats(self):
+        print("---- Active Patterns ----")
+        print("\n".join(["{:40} {:10}".format(each.__class__.__name__, each.state) for each in self.active_pats]))
+        print("-------------------------")
+
     def step(self):
+        ''' tick update '''
         for each in self.active_pats:
             if each.state == State.OFF:
                 self.active_pats.remove(each)
@@ -113,10 +89,12 @@ class LightController(object):
         self.leds.flush()
 
     def event(self, event):
+        ''' handle midi event '''
         for each in self.active_pats:
             each.event(event)
 
     def stop_patch(self, name):
+        ''' stop an active patch '''
         for each in self.active_pats:
             if name == each.__class__.__name__:
                 each.state = State.STOP
@@ -124,16 +102,64 @@ class LightController(object):
     def start_patch(self, name, solo=False, **kwargs):
         ''' start a patch, stop all others '''
         if name in patch_classes.keys():
-            for each in self.active_pats:
-                if each.__class__.__name__ == name:
-                    # patch already running!
-                    return
             # start the desired patch (no duplicates)
-            self.active_pats.append(patch_classes[name](self.layout, **kwargs))
-            if solo and not self.active_pats[-1].is_oneshot:
+            self.active_pats.append(patch_classes[name](self.config, **kwargs))
+            if solo:
                 # stop all other patches
                 for each in self.active_pats:
                     if name != each.__class__.__name__:
                         each.state = State.STOP
         else:
             print("Unknown patch \"%s\"" % name)
+
+    def text_cmd(self, cmd):
+        ''' parse and execute pattern commands from strings '''
+        re_name = "start:\s*([\w_]+)"
+        re_args = "([\w_]+)=([\w_:\(\)\.,]+)"
+        re_note = "([a-z0-9#]+):([a-z0-9#]+)"
+        re_color = "\(([0-9\.]+),([0-9\.]+),([0-9\.]+)\)"
+        re_true = "(true|yes|)"
+
+        cmd = cmd.lower()
+
+        if "start:" in cmd:
+            # start a pattern
+            name = re.findall(re_name, cmd)
+            args = re.findall(re_args, cmd)
+            if len(name):
+                if name[0] in patch_classes.keys():
+                    # handle args
+                    kwargs = {}
+                    for key, value in args:
+                        try:
+                            if key == "range":
+                                kwargs[key] = tuple(self.config.t2m[each] - self.config["Bells"]["midi_offset"] for each in re.findall(re_note, value)[0])
+                            elif key == "hold":
+                                kwargs[key] = bool(re.match(re_true, value))
+                            elif key == "one_led":
+                                kwargs[key] = bool(re.match(re_true, value))
+                            elif key == "color":
+                                kwargs[key] = tuple(float(x) for x in re.findall(re_color, value)[0])
+                            elif key == "rate":
+                                kwargs[key] = float(value)
+                            else:
+                                print("Error: Unknown pattern \"{}\"".format(key))
+                        except:
+                            print("Error: failed to parse \"{}={}\"".format(key, value))
+
+                    self.start_patch(name[0], **kwargs)
+                else:
+                    print("Error: Unrecognized patch \"{}\"".format(name[0]))
+
+        elif "stop:" in cmd:
+            # stop a pattern
+            name = re.findall(re_name, cmd)
+            if len(name):
+                if name[0] in patch_classes.keys():
+                    self.stop_patch(name[0])
+                else:
+                    print("Error: Unrecognized patch \"{}\"".format(name[0]))
+        else:
+            print("Error: Unable to parse command \"{}\"".format(cmd))
+
+        self.print_active_pats()

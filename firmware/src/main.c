@@ -106,7 +106,7 @@ void ring_bell(uint8_t velocity, uint8_t mortello) {
 		PORTA.OUT &= ~PIN_DAMPER;
 	}
 	// clap bell using Timer B
-	TCB0.CCMP = config.clapper_min + (velocity * config.clapper_max);
+	TCB0.CCMP = config.clapper_min + (velocity * config.clapper_max / 2);
 	TCB0.CNT = 0;
 	TCB0.CTRLA |= TCB_ENABLE_bm;
 }
@@ -137,7 +137,7 @@ void process_rx(uint8_t cmd, uint8_t value) {
 			config.clapper_min = value << 4;
 			break;
 		case CMD_SET_CLAPPER_MAX:
-			config.clapper_max = value + 0x16;
+			config.clapper_max = value + 0x10;
 			break;
 		case CMD_COMMIT_E2:
 			if (value == E2_COMMIT_KEY) {

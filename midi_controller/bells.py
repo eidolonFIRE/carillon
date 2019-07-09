@@ -20,11 +20,12 @@ class BellsController(object):
 
         # initial states
         self.last_rung = {}
-        self.num_bells = config["num_bells"]
-        self.midi_offset = config["midi_offset"]
+        self.num_bells = config["Bells"]["num_bells"]
+        self.midi_offset = config["Bells"]["midi_offset"]
+        self.sustain = False
 
         # open serial ouput
-        self.tty = serial.Serial(config["control_tty"], int(config["control_baud"]), bytesize=8, parity='N', stopbits=1)
+        self.tty = serial.Serial(config["Bells"]["control_tty"], int(config["Bells"]["control_baud"]), bytesize=8, parity='N', stopbits=1)
 
     def _tx(self, address, cmd, value):
         assert cmd.value is not 0x0, "Command value 0x0 is reserved!"
