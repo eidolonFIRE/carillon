@@ -4,6 +4,7 @@ from config import Config
 import sys
 import os
 import mido
+from mido.sockets import PortServer
 import threading
 import signal
 from time import sleep
@@ -28,6 +29,7 @@ def sigint_handler(signal, frame):
 
 
 def handle_midi_event(msg):
+    print(msg)
     if hasattr(msg, "text"):
         leds.text_cmd(msg.text)
 
@@ -68,7 +70,6 @@ def thread_device_input():
         print('Using {}'.format(port))
         print('Waiting for messages...')
         for msg in port:
-            print(msg)
             handle_midi_event(msg)
             if not ALIVE:
                 print("Thread: closing device_input")
@@ -86,7 +87,6 @@ def thread_play_file(filename):
         print('Track {}: {}'.format(i, track.name))
 
     for msg in midifile.play(meta_messages=True):
-        # print(msg)
         handle_midi_event(msg)
         if not ALIVE:
             print("Thread: closing play_file")
@@ -95,12 +95,31 @@ def thread_play_file(filename):
     ALIVE = False
 
 
+def thread_midi_server(port):
+    global ALIVE
+    print("Thread: starting midi_server (localhost:{})".format(port))
+    with PortServer('localhost', port) as server:
+        while True:
+            client = server.accept()
+            try:
+                for message in client:
+                    print(message)
+                    handle_midi_event(message)
+                    if not ALIVE:
+                        print("Thread: closing midi_server")
+                        return
+            except:
+                print("midi client disconnected")
+
+
 # /////////////////////////// MAIN ///////////////////////////
 def main():
     thread_leds = threading.Thread(target=thread_update_leds)
     thread_leds.start()
     thread_device = threading.Thread(target=thread_device_input, daemon=True)
     thread_device.start()
+    thread_server = threading.Thread(target=thread_midi_server, daemon=True, args=(9080,))
+    thread_server.start()
 
     if len(sys.argv) > 1 and os.path.isfile(sys.argv[1]):
         # PLAY A MIDI FILE
@@ -109,7 +128,6 @@ def main():
         thread_file.join()
 
     thread_leds.join()
-    # thread_device.join()
     bells.close()
 
 
