@@ -15,6 +15,7 @@ config = Config("config.json")
 bells = BellsController(config)
 leds = LightController(config)
 
+leds.text_cmd("start: fade_to_color")
 leds.text_cmd("start: note_pulse_color")
 
 config.transpose = 0
@@ -31,7 +32,7 @@ def sigint_handler(signal, frame):
 
 
 def handle_midi_event(msg):
-    print(msg)
+    # print(msg)
     if hasattr(msg, "text"):
         leds.text_cmd(msg.text)
 
@@ -39,6 +40,8 @@ def handle_midi_event(msg):
         msg.note += config.transpose
 
     if msg.type == 'note_on' and msg.velocity > 0:
+        if bells.mortello:
+            bells.damp(msg.note, duration=4)
         bells.ring(msg.note, max(1, int(msg.velocity * config.playback_volume)))
     elif msg.type == 'note_off' or (hasattr(msg, "velocity") and msg.velocity == 0):
         if not bells.sustain:
@@ -119,7 +122,7 @@ def thread_midi_server(port):
             client = server.accept()
             try:
                 for message in client:
-                    print(message)
+                    # print(message)
                     handle_midi_event(message)
                     if not ALIVE:
                         print("Thread: closing midi_server")
