@@ -23,6 +23,7 @@ class BellsController(object):
         self.num_bells = config["Bells"]["num_bells"]
         self.midi_offset = config["Bells"]["midi_offset"]
         self.sustain = False
+        self.mortello = False
 
         # open serial ouput
         self.tty = serial.Serial(config["Bells"]["control_tty"], int(config["Bells"]["control_baud"]), bytesize=8, parity='N', stopbits=1)
@@ -32,6 +33,18 @@ class BellsController(object):
         self.tty.write(bytes([0xC0 | (address & 0x3F), cmd.value & 0x7F, value & 0x7F]))
 
     """ -------------------------- PUBLIC API -------------------------- """
+
+    def pedal_sustain_on(self):
+        self.sustain = True
+
+    def pedal_sustain_off(self):
+        self.sustain = False
+
+    def pedal_mortello_on(self):
+        self.mortello = True
+
+    def pedal_mortello_off(self):
+        self.mortello = False
 
     def map_note(self, note):
         # bell index from midi note

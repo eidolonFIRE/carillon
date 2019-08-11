@@ -15,9 +15,11 @@ config = Config("config.json")
 bells = BellsController(config)
 leds = LightController(config)
 
+leds.text_cmd("start: note_pulse_color")
+
 config.transpose = 0
 config.playback_speed = 1.0
-config.playback_volume = 0.3
+config.playback_volume = 1.0
 
 ALIVE = True
 
@@ -62,18 +64,32 @@ def thread_update_leds():
     leds.close()
 
 
-def thread_device_input():
+def thread_device_input(port):
     global ALIVE
-    port_options = list(filter(lambda x: "Through" not in x, mido.get_input_names()))
-    portname = port_options[0] if len(port_options) else None
-    with mido.open_input(portname) as port:
-        print('Using {}'.format(port))
-        print('Waiting for messages...')
-        for msg in port:
-            handle_midi_event(msg)
-            if not ALIVE:
-                print("Thread: closing device_input")
-                return
+    for msg in port:
+        handle_midi_event(msg)
+        if not ALIVE or port.closed:
+            return
+
+
+def thread_device_monitor():
+    global ALIVE
+    while ALIVE:
+        # scan list
+        port_options = list(filter(lambda x: "Through" not in x, mido.get_input_names()))
+        portname = port_options[0] if len(port_options) else None
+
+        if portname:
+            with mido.open_input(portname) as port:
+                print("Device connected: {}".format(portname))
+                thread_device = threading.Thread(target=thread_device_input, daemon=True, args=(port,))
+                thread_device.start()
+                while ALIVE and portname in mido.get_input_names():
+                    sleep(5)
+                port.close()
+                thread_device.join(1)
+                print("Device disconnected: {}".format(portname))
+        sleep(5)
 
 
 def thread_play_file(filename):
@@ -116,10 +132,21 @@ def thread_midi_server(port):
 def main():
     thread_leds = threading.Thread(target=thread_update_leds)
     thread_leds.start()
-    thread_device = threading.Thread(target=thread_device_input, daemon=True)
+    thread_device = threading.Thread(target=thread_device_monitor, daemon=True)
     thread_device.start()
     thread_server = threading.Thread(target=thread_midi_server, daemon=True, args=(9080,))
     thread_server.start()
+
+    # detect OS and load gpio pedals if on raspberry pi
+    os_type = " ".join(os.uname())
+    if "raspberrypi" in os_type or "arm" in os_type:
+        from gpiozero import Button
+        damp_pedal = Button("GPIO17")
+        mort_pedal = Button("GPIO27")
+        damp_pedal.when_pressed = bells.pedal_sustain_on
+        damp_pedal.when_released = bells.pedal_sustain_off
+        mort_pedal.when_pressed = bells.pedal_mortello_on
+        mort_pedal.when_released = bells.pedal_mortell_off
 
     if len(sys.argv) > 1 and os.path.isfile(sys.argv[1]):
         # PLAY A MIDI FILE
