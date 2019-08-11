@@ -57,7 +57,11 @@ class BellsController(object):
         return address
 
     def ring(self, note, velocity):
-        self._tx(self.map_note(note), BellCommand.RING, velocity)
+        if self.mortello:
+            self.damp(note, duration=0xF)
+            self._tx(self.map_note(note), BellCommand.RING_M, velocity)
+        else:
+            self._tx(self.map_note(note), BellCommand.RING, velocity)
         self.last_rung[note] = time()
 
     def damp(self, note, duration=None):
@@ -67,10 +71,6 @@ class BellsController(object):
             else:
                 duration = 0
         self._tx(self.map_note(note), BellCommand.DAMP, duration)
-
-    def mortello(self, note, velocity):
-        self.damp(note, duration=0xF)
-        self._tx(self.map_note(note), BellCommand.RING_M, velocity)
 
     def set_clapper_min(self, note, value):
         self._tx(self.map_note(note), BellCommand.SET_CLAPPER_MIN, value)
