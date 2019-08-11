@@ -146,7 +146,7 @@ def main():
         damp_pedal.when_pressed = bells.pedal_sustain_on
         damp_pedal.when_released = bells.pedal_sustain_off
         mort_pedal.when_pressed = bells.pedal_mortello_on
-        mort_pedal.when_released = bells.pedal_mortell_off
+        mort_pedal.when_released = bells.pedal_mortello_off
 
     if len(sys.argv) > 1 and os.path.isfile(sys.argv[1]):
         # PLAY A MIDI FILE
