@@ -41,8 +41,9 @@ def handle_midi_event(msg):
 
     if msg.type == 'note_on' and msg.velocity > 0:
         if bells.mortello:
-            bells.damp(msg.note, duration=4)
-        bells.ring(msg.note, max(1, int(msg.velocity * config.playback_volume)))
+            bells.mortello(msg.note, max(1, int(msg.velocity * config.playback_volume)))
+        else:
+            bells.ring(msg.note, max(1, int(msg.velocity * config.playback_volume)))
     elif msg.type == 'note_off' or (hasattr(msg, "velocity") and msg.velocity == 0):
         if not bells.sustain:
             bells.damp(msg.note)
