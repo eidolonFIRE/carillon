@@ -1,4 +1,3 @@
-import sys
 from time import time
 import mido
 from bells import BellsController
@@ -11,10 +10,8 @@ config = Config("config.json")
 # Spin up main objects
 bells = BellsController(config)
 
-if len(sys.argv) > 1:
-    portname = sys.argv[1]
-else:
-    portname = None  # Use default port
+port_options = list(filter(lambda x: "Through" not in x, mido.get_input_names()))
+portname = port_options[0] if len(port_options) else None
 
 
 class cl:

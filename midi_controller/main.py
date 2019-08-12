@@ -16,7 +16,7 @@ bells = BellsController(config)
 leds = LightController(config)
 
 leds.text_cmd("start: fade_to_color")
-leds.text_cmd("start: note_pulse_color")
+leds.text_cmd("start: note_pulse_gradient hold=true")
 
 config.transpose = 0
 config.playback_speed = 1.0
