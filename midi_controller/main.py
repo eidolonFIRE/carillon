@@ -32,7 +32,7 @@ def sigint_handler(signal, frame):
 
 
 def handle_midi_event(msg):
-    print(msg)
+    # print(msg)
     if hasattr(msg, "text"):
         leds.text_cmd(msg.text)
 
@@ -50,7 +50,7 @@ def handle_midi_event(msg):
             bells.sustain = msg.value >= 64
         elif msg.control == 5:
             config.playback_volume = min(1.0, msg.value / 127.0)
-            print("Volume: {.2f}x".format(config.playback_volume))
+            print("Volume: {:.2}x".format(config.playback_volume))
 
     if hasattr(msg, "note"):
         msg.note = bells.map_note(msg.note)
