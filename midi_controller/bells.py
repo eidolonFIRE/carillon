@@ -22,11 +22,17 @@ class BellsController(object):
         self.last_rung = {}
         self.num_bells = config["Bells"]["num_bells"]
         self.midi_offset = config["Bells"]["midi_offset"]
-        self.sustain = False
+        self._sustain = False
+        self._sustain_notes = set()
         self.mortello = False
 
         # open serial ouput
         self.tty = serial.Serial(config["Bells"]["control_tty"], int(config["Bells"]["control_baud"]), bytesize=8, parity='N', stopbits=1)
+
+        # push calibration to bells
+        for idx, each in enumerate(config._config_file["Bells"]["calibration"]):
+            self.set_clapper_min(idx + self.midi_offset, each[0])
+            self.set_clapper_max(idx + self.midi_offset, each[1])
 
     def _tx(self, address, cmd, value):
         assert cmd.value is not 0x0, "Command value 0x0 is reserved!"
@@ -35,10 +41,24 @@ class BellsController(object):
     """ -------------------------- PUBLIC API -------------------------- """
 
     def pedal_sustain_on(self):
-        self.sustain = True
+        self._sustain = True
 
     def pedal_sustain_off(self):
-        self.sustain = False
+        self._sustain = False
+        for each in self._sustain_notes:
+            self.damp(each)
+        self._sustain_notes = set()
+
+    @property
+    def sustain(self):
+        return self._sustain
+
+    @sustain.setter
+    def sustain(self, value):
+        if value:
+            self.pedal_sustain_on()
+        else:
+            self.pedal_sustain_off()
 
     def pedal_mortello_on(self):
         self.mortello = True
@@ -65,12 +85,15 @@ class BellsController(object):
         self.last_rung[note] = time()
 
     def damp(self, note, duration=None):
-        if duration is None:
-            if note in self.last_rung.keys():
-                duration = min(0x1F, max(0xC, int(0x1F - 8 * (time() - self.last_rung[note]))))
-            else:
-                duration = 0
-        self._tx(self.map_note(note), BellCommand.DAMP, duration)
+        if self.sustain:
+            self._sustain_notes.add(note)
+        else:
+            if duration is None:
+                if note in self.last_rung.keys():
+                    duration = min(0x1F, max(0xC, int(0x1F - 8 * (time() - self.last_rung[note]))))
+                else:
+                    duration = 0
+            self._tx(self.map_note(note), BellCommand.DAMP, duration)
 
     def set_clapper_min(self, note, value):
         self._tx(self.map_note(note), BellCommand.SET_CLAPPER_MIN, value)

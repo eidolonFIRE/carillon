@@ -42,8 +42,7 @@ def handle_midi_event(msg):
     if msg.type == 'note_on' and msg.velocity > 0:
         bells.ring(msg.note, max(1, int(msg.velocity * config.playback_volume)))
     elif msg.type == 'note_off' or (hasattr(msg, "velocity") and msg.velocity == 0):
-        if not bells.sustain:
-            bells.damp(msg.note)
+        bells.damp(msg.note)
 
     if msg.type == 'control_change':
         if msg.control == 64:

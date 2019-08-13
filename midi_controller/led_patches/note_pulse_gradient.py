@@ -13,7 +13,7 @@ class note_pulse_gradient(base):
 
     def set_led(self, note, vel, leds):
         color_target = color_blend(self.low_color, self.high_color, float(note) / self.lut.notes_matrix.size)
-        color = color_blend(self.base_color, color_target, vel / 127.0)
+        color = color_blend(color_target, self.base_color, vel / 127.0)
 
         # set LEDs
         idx = self.lut.n2i[note]
@@ -27,10 +27,10 @@ class note_pulse_gradient(base):
         if len(self.events):
             event = self.events.pop()
             if event.type == "note_on" and event.velocity > 0:
-                self.active_notes[event.note] = True
+                self.active_notes[event.note] = event.velocity
                 self.set_led(event.note, event.velocity, leds)
             elif event.type == "note_on" and event.velocity == 0 or event.type == "note_off":
-                self.active_notes[event.note] = False
+                self.active_notes[event.note] = event.velocity
 
         # hold value while note active
         if self.hold:

@@ -2,6 +2,7 @@ from time import time
 import mido
 from bells import BellsController
 from config import Config
+import json
 
 
 # LOAD CONFIG
@@ -55,10 +56,19 @@ cur_note = -1
 prev_value = 0
 last_ring = time()
 
+saved = set()
 note_min = {}
 note_max = {}
+note_min_original = {}
+note_max_original = {}
 
-saved = set()
+# load from file
+midi_offset = int(config._config_file["Bells"]["midi_offset"])
+for idx, each in enumerate(config._config_file["Bells"]["calibration"]):
+    note_min[idx + midi_offset] = each[0]
+    note_max[idx + midi_offset] = each[1]
+    note_min_original[idx + midi_offset] = each[0]
+    note_max_original[idx + midi_offset] = each[1]
 
 try:
     with mido.open_input(portname) as port:
@@ -66,7 +76,6 @@ try:
         for msg in port:
 
             # print(vars(msg))
-
             if msg.type == 'note_on':
                 if msg.note != cur_note:
                     # select new note to config
@@ -74,6 +83,8 @@ try:
 
                 bells.ring(cur_note, msg.velocity)
                 last_ring = time()
+            elif msg.type == 'note_off' or (hasattr(msg, "velocity") and msg.velocity == 0):
+                bells.damp(msg.note)
 
             elif msg.type == 'control_change' and cur_note:
                 # limit frequency of test rings
@@ -99,22 +110,33 @@ try:
                         bells.commit_eeprom(cur_note)
                         saved.add(cur_note)
 
-            print(cl.bold + cl.f.lightgrey + "\nNote - Min - Max")
+            print(cl.bold + cl.f.lightgrey + "\nSaved Note)   Min    -  Max   \n" + cl.reset + "-" * 30)
             for note in range(bells.midi_offset, bells.midi_offset + 27):
-                if note == cur_note:
-                    string = cl.bold
-                else:
-                    string = cl.reset
+                min_dif = note_min.get(note, 0) - note_min_original.get(note, 0)
+                max_dif = note_max.get(note, 0) - note_max_original.get(note, 0)
 
-                if note in saved:
-                    string += cl.f.lightgreen
-                else:
-                    string += cl.f.lightgrey
-                string += "{:3}) - {:3} - {:3}".format(note, note_min.get(note, ""), note_max.get(note, ""))
-                print(string)
-
+                print("{}{}{:^6}{:3})  {}{:3} {}{:3} {}- {:3} {}{:3}".format(
+                    cl.bold if note == cur_note else cl.reset,
+                    cl.f.lightgreen if note in saved else cl.f.lightgrey,
+                    "[X]" if note in saved else "[ ]",
+                    ("> " if note == cur_note else "  ") + str(note),
+                    cl.reset,
+                    note_min.get(note, ""),
+                    cl.f.lightred if min_dif < 0 else cl.f.lightgreen,
+                    "{:+2}".format(min_dif) if min_dif != 0 else "",
+                    cl.reset,
+                    note_max.get(note, ""),
+                    cl.f.lightred if max_dif < 0 else cl.f.lightgreen,
+                    "{:+2}".format(max_dif) if max_dif != 0 else "",
+                ))
+            print(cl.reset)
 
 except KeyboardInterrupt:
-    pass
+    # save config to file
+    config._config_file["Bells"]["calibration"] = [
+        ([note_min.get(x, 0), note_max.get(x, 0)] if x in saved else [note_min_original.get(x, 0), note_max_original.get(x, 0)])
+        for x in range(midi_offset, midi_offset + 27)]
+    outFile = open("config.json", "w")
+    outFile.write(json.dumps(config._config_file, indent=4))
 
 bells.close()
