@@ -63,8 +63,8 @@ note_min_original = {}
 note_max_original = {}
 
 # load from file
-midi_offset = int(config._config_file["Bells"]["midi_offset"])
-for idx, each in enumerate(config._config_file["Bells"]["calibration"]):
+midi_offset = int(config["Bells"]["midi_offset"])
+for idx, each in enumerate(config["Bells"]["calibration"]):
     note_min[idx + midi_offset] = each[0]
     note_max[idx + midi_offset] = each[1]
     note_min_original[idx + midi_offset] = each[0]
@@ -133,7 +133,7 @@ try:
 
 except KeyboardInterrupt:
     # save config to file
-    config._config_file["Bells"]["calibration"] = [
+    config["Bells"]["calibration"] = [
         ([note_min.get(x, 0), note_max.get(x, 0)] if x in saved else [note_min_original.get(x, 0), note_max_original.get(x, 0)])
         for x in range(midi_offset, midi_offset + 27)]
     outFile = open("config.json", "w")

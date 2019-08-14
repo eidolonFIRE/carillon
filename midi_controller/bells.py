@@ -18,6 +18,8 @@ class BellsController(object):
     def __init__(self, config):
         super(BellsController, self).__init__()
 
+        self.config = config
+
         # initial states
         self.last_rung = {}
         self.num_bells = config["Bells"]["num_bells"]
@@ -30,7 +32,7 @@ class BellsController(object):
         self.tty = serial.Serial(config["Bells"]["control_tty"], int(config["Bells"]["control_baud"]), bytesize=8, parity='N', stopbits=1)
 
         # push calibration to bells
-        for idx, each in enumerate(config._config_file["Bells"]["calibration"]):
+        for idx, each in enumerate(config["Bells"]["calibration"]):
             self.set_clapper_min(idx + self.midi_offset, each[0])
             self.set_clapper_max(idx + self.midi_offset, each[1])
 
@@ -39,6 +41,23 @@ class BellsController(object):
         self.tty.write(bytes([0xC0 | (address & 0x3F), cmd.value & 0x7F, value & 0x7F]))
 
     """ -------------------------- PUBLIC API -------------------------- """
+
+    def handle_midi_event(self, msg):
+        # print(msg)
+        if hasattr(msg, "note"):
+            msg.note += self.config.transpose
+
+        if msg.type == 'note_on' and msg.velocity > 0:
+            self.ring(msg.note, max(1, int(msg.velocity * self.config.playback_volume)))
+        elif msg.type == 'note_off' or (hasattr(msg, "velocity") and msg.velocity == 0):
+            self.damp(msg.note)
+
+        if msg.type == 'control_change':
+            if msg.control == 64:
+                self.sustain = msg.value >= 64
+            elif msg.control == 5:
+                self.config.playback_volume = min(1.0, msg.value / 127.0)
+                print("Volume: {:.2}x".format(self.config.playback_volume))
 
     def pedal_sustain_on(self):
         self._sustain = True

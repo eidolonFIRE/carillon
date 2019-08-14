@@ -1,28 +1,40 @@
 from bells import BellsController
 from leds import LightController
 from config import Config
-import sys
 import os
 import mido
 from mido.sockets import PortServer
-import threading
 import signal
 from time import sleep
-
+import socket
+import threading
+import socketserver
+import difflib
+import re
 
 # Spin up main objects
 config = Config("config.json")
 bells = BellsController(config)
 leds = LightController(config)
 
-leds.text_cmd("start: fade_to_color")
-leds.text_cmd("start: note_pulse_gradient hold=true")
+leds.text_cmd("add fade_to_color")
+leds.text_cmd("add note_pulse_gradient hold=true")
 
 config.transpose = 0
 config.playback_speed = 1.0
 config.playback_volume = 1.0
 
 ALIVE = True
+HALT_PLAYBACK = False
+
+# get my local IP address
+_s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+_s.connect(("8.8.8.8", 80))
+MY_IP = _s.getsockname()[0]
+_s.close()
+
+_os_type = " ".join(os.uname())
+IS_RASPBERRY = "raspberrypi" in _os_type or "arm" in _os_type
 
 
 def sigint_handler(signal, frame):
@@ -32,25 +44,9 @@ def sigint_handler(signal, frame):
 
 
 def handle_midi_event(msg):
-    # print(msg)
     if hasattr(msg, "text"):
         leds.text_cmd(msg.text)
-
-    if hasattr(msg, "note"):
-        msg.note += config.transpose
-
-    if msg.type == 'note_on' and msg.velocity > 0:
-        bells.ring(msg.note, max(1, int(msg.velocity * config.playback_volume)))
-    elif msg.type == 'note_off' or (hasattr(msg, "velocity") and msg.velocity == 0):
-        bells.damp(msg.note)
-
-    if msg.type == 'control_change':
-        if msg.control == 64:
-            bells.sustain = msg.value >= 64
-        elif msg.control == 5:
-            config.playback_volume = min(1.0, msg.value / 127.0)
-            print("Volume: {:.2}x".format(config.playback_volume))
-
+    bells.handle_midi_event(msg)
     if hasattr(msg, "note"):
         msg.note = bells.map_note(msg.note)
         leds.event(msg)
@@ -58,12 +54,10 @@ def handle_midi_event(msg):
 
 def thread_update_leds():
     global ALIVE
-    # global leds
     print("Starting led_update_loop")
     while ALIVE:
         leds.step()
         sleep(1.0 / 100)
-    print("Thread: closing update_leds")
     leds.close()
 
 
@@ -95,40 +89,73 @@ def thread_device_monitor():
         sleep(5)
 
 
-def thread_play_file(filename):
+def thread_play_midi_file(filename):
     global ALIVE
-    midifile = mido.MidiFile(filename)
+    global HALT_PLAYBACK
+
+    available_songs = [x.replace(".mid", "") for x in os.listdir("../midi_songs")]
+    best_match = difflib.get_close_matches(filename, available_songs, n=1, cutoff=0.1)
+    if len(best_match):
+        best_match = best_match[0]
+    else:
+        print("Couldn't find matching midi file for \"{}\"".format(filename))
+        return
+
+    midifile = mido.MidiFile("../midi_songs/{}.mid".format(best_match))
     midifile.ticks_per_beat *= config.playback_speed
 
-    print("Midi file type: {}".format(midifile.type))
+    print("Playing file: {}".format(best_match))
     print("Expected play time: {:.2f}".format(midifile.length * config.playback_speed))
     for i, track in enumerate(midifile.tracks):
         print('Track {}: {}'.format(i, track.name))
 
     for msg in midifile.play(meta_messages=True):
         handle_midi_event(msg)
-        if not ALIVE:
-            print("Thread: closing play_file")
-            return
+        if not ALIVE or HALT_PLAYBACK:
+            print("Halting midi playback!")
+            HALT_PLAYBACK = False
+            break
 
-    ALIVE = False
+    # stop all patterns
+    leds.text_cmd("clear")
 
 
 def thread_midi_server(port):
     global ALIVE
-    print("Thread: starting midi_server (localhost:{})".format(port))
+    print("Starting midi_server ({}:{})".format(MY_IP, port))
     with PortServer('localhost', port) as server:
         while True:
             client = server.accept()
             try:
                 for message in client:
-                    # print(message)
                     handle_midi_event(message)
                     if not ALIVE:
-                        print("Thread: closing midi_server")
+                        print("Closing midi_server")
                         return
             except:
-                print("midi client disconnected")
+                print("Remote Client Disconnected")
+
+
+class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
+
+    def handle(self):
+        global HALT_PLAYBACK
+
+        data = str(self.request.recv(1024), 'ascii').strip()
+        if re.findall("^play:", data):
+            thread_playback = threading.Thread(target=thread_play_midi_file, daemon=True, args=(data[5:].strip(),))
+            thread_playback.start()
+        elif re.findall("^stop", data):
+            HALT_PLAYBACK = True
+        elif re.findall("^pat:", data):
+            leds.text_cmd(data[4:].strip())
+
+        # response = bytes("{}: {}".format(cur_thread.name, data), 'ascii')
+        # self.request.sendall(response)
+
+
+class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    pass
 
 
 # /////////////////////////// MAIN ///////////////////////////
@@ -137,12 +164,16 @@ def main():
     thread_leds.start()
     thread_device = threading.Thread(target=thread_device_monitor, daemon=True)
     thread_device.start()
-    thread_server = threading.Thread(target=thread_midi_server, daemon=True, args=(9080,))
-    thread_server.start()
+    thread_midi = threading.Thread(target=thread_midi_server, daemon=True, args=(9080,))
+    thread_midi.start()
+
+    cmd_server = ThreadedTCPServer(("localhost", 9081), ThreadedTCPRequestHandler)
+    thread_cmd_server = threading.Thread(target=cmd_server.serve_forever, daemon=True)
+    print("Starting cmd_server ( {}:{} )".format(MY_IP, 9081))
+    thread_cmd_server.start()
 
     # detect OS and load gpio pedals if on raspberry pi
-    os_type = " ".join(os.uname())
-    if "raspberrypi" in os_type or "arm" in os_type:
+    if IS_RASPBERRY:
         from gpiozero import Button
         damp_pedal = Button("GPIO17")
         mort_pedal = Button("GPIO27")
@@ -151,14 +182,10 @@ def main():
         mort_pedal.when_pressed = bells.pedal_mortello_on
         mort_pedal.when_released = bells.pedal_mortello_off
 
-    if len(sys.argv) > 1 and os.path.isfile(sys.argv[1]):
-        # PLAY A MIDI FILE
-        thread_file = threading.Thread(target=thread_play_file, daemon=True, args=(sys.argv[1],))
-        thread_file.start()
-        thread_file.join()
-
     thread_leds.join()
     bells.close()
+    cmd_server.server_close()
+    cmd_server.shutdown()
 
 
 if __name__ == "__main__":

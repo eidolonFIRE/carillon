@@ -11,7 +11,7 @@ class off(base):
         self.i = 0
 
     def _step(self, state, leds):
-        if self.i >= self.len:
+        if self.i >= len(self.strip_order):
             self.i = 0
             shuffle(self.strip_order)
         leds[self.strip_order[self.i]] = np.zeros((3))

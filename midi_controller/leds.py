@@ -69,6 +69,7 @@ class LightController(object):
             config["Leds"]["channel"]
         )
         self.active_pats = []
+        self.default_off_pat = patch_classes["off"](self.config)
 
     def close(self):
         if hasattr(self.leds._hw, "close"):
@@ -80,27 +81,31 @@ class LightController(object):
         print("-------------------------")
 
     def step(self):
-        ''' tick update '''
-        for each in self.active_pats:
-            if each.state == State.OFF:
-                self.active_pats.remove(each)
-            elif each.state.value > State.OFF.value:
-                each.step(self.leds)
+        """ tick update """
+        if len(self.active_pats):
+            for each in self.active_pats:
+                if each.state == State.OFF:
+                    self.active_pats.remove(each)
+                elif each.state.value > State.OFF.value:
+                    each.step(self.leds)
+        else:
+            # if no active pats, run default "off" patch
+            self.default_off_pat.step(self.leds)
         self.leds.flush()
 
     def event(self, event):
-        ''' handle midi event '''
+        """ handle midi event """
         for each in self.active_pats:
             each.event(event)
 
     def stop_patch(self, name):
-        ''' stop an active patch '''
+        """ stop an active patch """
         for each in self.active_pats:
             if name == each.__class__.__name__:
                 each.state = State.STOP
 
     def start_patch(self, name, solo=False, **kwargs):
-        ''' start a patch, stop all others '''
+        """ start a patch, stop all others """
         if name in patch_classes.keys():
             # start the desired patch (no duplicates)
             self.active_pats.append(patch_classes[name](self.config, **kwargs))
@@ -113,8 +118,8 @@ class LightController(object):
             print("Unknown patch \"%s\"" % name)
 
     def text_cmd(self, cmd):
-        ''' parse and execute pattern commands from strings '''
-        re_name = "start:\s*([\w_]+)"
+        """ parse and execute pattern commands from strings """
+        re_name = "\s*([\w_]+)"
         re_args = "([\w_]+)=([\w_:\(\)\.,]+)"
         re_note = "([a-z0-9#]+):([a-z0-9#]+)"
         re_color = "\(([0-9\.]+),([0-9\.]+),([0-9\.]+)\)"
@@ -122,7 +127,8 @@ class LightController(object):
 
         cmd = cmd.lower()
 
-        if "start:" in cmd:
+        if re.findall("^add", cmd):
+            cmd = cmd[3:]
             # start a pattern
             name = re.findall(re_name, cmd)
             args = re.findall(re_args, cmd)
@@ -151,7 +157,8 @@ class LightController(object):
                 else:
                     print("Error: Unrecognized patch \"{}\"".format(name[0]))
 
-        elif "stop:" in cmd:
+        elif re.findall("^rem", cmd):
+            cmd = cmd[3:]
             # stop a pattern
             name = re.findall(re_name, cmd)
             if len(name):
@@ -159,6 +166,12 @@ class LightController(object):
                     self.stop_patch(name[0])
                 else:
                     print("Error: Unrecognized patch \"{}\"".format(name[0]))
+
+        elif re.findall("^clear", cmd):
+            # stop all patterns
+            for each in self.active_pats:
+                each.state = State.STOP
+
         else:
             print("Error: Unable to parse command \"{}\"".format(cmd))
 
