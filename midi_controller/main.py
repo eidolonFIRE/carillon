@@ -11,14 +11,16 @@ import threading
 import socketserver
 import difflib
 import re
+import multiprocessing as mp
 
 # Spin up main objects
 config = Config("config.json")
 bells = BellsController(config)
 leds = LightController(config)
-
 leds.text_cmd("add fade_to_color")
 leds.text_cmd("add note_pulse_gradient hold=true")
+leds.cmd_queue = mp.Queue()
+leds.midi_queue = mp.Queue()
 
 config.transpose = 0
 config.playback_speed = 1.0
@@ -45,20 +47,11 @@ def sigint_handler(signal, frame):
 
 def handle_midi_event(msg):
     if hasattr(msg, "text"):
-        leds.text_cmd(msg.text)
+        leds.cmd_queue.put(msg.text)
     bells.handle_midi_event(msg)
     if hasattr(msg, "note"):
         msg.note = bells.map_note(msg.note)
-        leds.event(msg)
-
-
-def thread_update_leds():
-    global ALIVE
-    print("Starting led_update_loop")
-    while ALIVE:
-        leds.step()
-        sleep(1.0 / 100)
-    leds.close()
+        leds.midi_queue.put(msg)
 
 
 def thread_device_input(port):
@@ -117,7 +110,7 @@ def thread_play_midi_file(filename):
             break
 
     # stop all patterns
-    leds.text_cmd("clear")
+    leds.cmd_queue.put("clear")
 
 
 def thread_midi_server(port):
@@ -148,7 +141,7 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
         elif re.findall("^stop", data):
             HALT_PLAYBACK = True
         elif re.findall("^pat:", data):
-            leds.text_cmd(data[4:].strip())
+            leds.cmd_queue.put(data[4:].strip())
 
         # response = bytes("{}: {}".format(cur_thread.name, data), 'ascii')
         # self.request.sendall(response)
@@ -158,10 +151,28 @@ class ThreadedTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     pass
 
 
+def process_update_leds():
+    global ALIVE
+    global leds
+    print("Starting led_update_loop")
+    while ALIVE:
+        while not leds.cmd_queue.empty():
+            leds.text_cmd(leds.cmd_queue.get())
+        while not leds.midi_queue.empty():
+            msg = leds.midi_queue.get()
+            msg.note = bells.map_note(msg.note)
+            leds.event(msg)
+        leds.step()
+        sleep(1.0 / 100)
+    leds.close()
+
+
 # /////////////////////////// MAIN ///////////////////////////
 def main():
-    thread_leds = threading.Thread(target=thread_update_leds)
-    thread_leds.start()
+    # mp.set_start_method('spawn')
+    process_leds = mp.Process(target=process_update_leds)
+    process_leds.start()
+
     thread_device = threading.Thread(target=thread_device_monitor, daemon=True)
     thread_device.start()
     thread_midi = threading.Thread(target=thread_midi_server, daemon=True, args=(9080,))
@@ -182,7 +193,8 @@ def main():
         mort_pedal.when_pressed = bells.pedal_mortello_on
         mort_pedal.when_released = bells.pedal_mortello_off
 
-    thread_leds.join()
+    # thread_leds.join()
+    process_leds.join()
     bells.close()
     cmd_server.server_close()
     cmd_server.shutdown()
