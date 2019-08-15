@@ -74,7 +74,12 @@ def thread_device_monitor():
                 print("Device connected: {}".format(portname))
                 thread_device = threading.Thread(target=thread_device_input, daemon=True, args=(port,))
                 thread_device.start()
-                while ALIVE and portname in mido.get_input_names():
+                device_active = True
+                while ALIVE and device_active:
+                    try:
+                        device_active = portname in mido.get_input_names()
+                    except:
+                        device_active = True
                     sleep(5)
                 port.close()
                 thread_device.join(1)
