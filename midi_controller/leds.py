@@ -137,19 +137,18 @@ class LightController(object):
                     # handle args
                     kwargs = {}
                     for key, value in args:
+                        print(key, value)
                         try:
                             if key == "range":
                                 kwargs[key] = tuple(self.config.t2m[each] - self.config["Bells"]["midi_offset"] for each in re.findall(re_note, value)[0])
-                            elif key == "hold":
-                                kwargs[key] = bool(re.match(re_true, value))
-                            elif key == "one_led":
+                            elif key in ["hold", "one_led", "piano"]:
                                 kwargs[key] = bool(re.match(re_true, value))
                             elif key == "color":
                                 kwargs[key] = tuple(float(x) for x in re.findall(re_color, value)[0])
                             elif key == "rate":
                                 kwargs[key] = float(value)
                             else:
-                                print("Error: Unknown pattern \"{}\"".format(key))
+                                kwargs[key] = eval(value)
                         except:
                             print("Error: failed to parse \"{}={}\"".format(key, value))
 
