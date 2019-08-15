@@ -154,6 +154,10 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
             HALT_PLAYBACK = True
         elif re.findall("^pat:", data):
             leds.cmd_queue.put(data[4:].strip())
+        elif re.findall("^vol:|^volume:", data):
+            config.playback_volume = float(data[data.find(":") + 1])
+        elif re.findall("^spd:|^speed:", data):
+            config.playback_speed = float(data[data.find(":") + 1])
 
         # response = bytes("{}: {}".format(cur_thread.name, data), 'ascii')
         # self.request.sendall(response)
