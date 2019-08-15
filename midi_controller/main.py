@@ -1,17 +1,18 @@
 from bells import BellsController
-from leds import LightController
 from config import Config
-import os
-import mido
+from leds import LightController
 from mido.sockets import PortServer
-import signal
 from time import sleep
-import socket
-import threading
-import socketserver
 import difflib
-import re
+import mido
 import multiprocessing as mp
+import os
+import pyudev
+import re
+import signal
+import socket
+import socketserver
+import threading
 
 # Spin up main objects
 config = Config("config.json")
@@ -54,12 +55,21 @@ def handle_midi_event(msg):
         leds.midi_queue.put(msg)
 
 
-def thread_device_input(port):
+def thread_device_input(midi_port):
     global ALIVE
-    for msg in port:
+    for msg in midi_port:
         handle_midi_event(msg)
-        if not ALIVE or port.closed:
+        if not ALIVE or midi_port.closed:
             return
+
+
+def wait_for_usb_change():
+    context = pyudev.Context()
+    monitor = pyudev.Monitor.from_netlink(context)
+    monitor.filter_by(subsystem='usb')
+    for device in iter(monitor.poll, None):
+        # print(device.action, device)
+        return
 
 
 def thread_device_monitor():
@@ -70,21 +80,18 @@ def thread_device_monitor():
         portname = port_options[0] if len(port_options) else None
 
         if portname:
-            with mido.open_input(portname) as port:
+            with mido.open_input(portname) as midi_port:
                 print("Device connected: {}".format(portname))
-                thread_device = threading.Thread(target=thread_device_input, daemon=True, args=(port,))
+                thread_device = threading.Thread(target=thread_device_input, daemon=True, args=(midi_port,))
                 thread_device.start()
-                device_active = True
-                while ALIVE and device_active:
-                    try:
-                        device_active = portname in mido.get_input_names()
-                    except:
-                        device_active = True
-                    sleep(5)
-                port.close()
+                while ALIVE and portname in mido.get_input_names():
+                    wait_for_usb_change()
                 thread_device.join(1)
                 print("Device disconnected: {}".format(portname))
-        sleep(5)
+        else:
+            print("No Midi Device Detected")
+        if ALIVE:
+            wait_for_usb_change()
 
 
 def thread_play_midi_file(filename):
