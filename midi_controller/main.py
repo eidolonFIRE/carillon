@@ -47,7 +47,6 @@ def handle_midi_event(msg):
         leds.cmd_queue.put(msg.text)
     bells.handle_midi_event(msg)
     if hasattr(msg, "note"):
-        msg.note = bells.map_note(msg.note)
         leds.midi_queue.put(msg)
 
 
@@ -174,7 +173,7 @@ def process_update_leds():
             leds.text_cmd(leds.cmd_queue.get())
         while not leds.midi_queue.empty():
             msg = leds.midi_queue.get()
-            msg.note = bells.map_note(msg.note)
+            msg.note = config.map_note(msg.note)
             leds.event(msg)
         leds.step()
         sleep(1.0 / 100)
