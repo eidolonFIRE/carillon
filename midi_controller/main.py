@@ -153,8 +153,6 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
             config.volume = float(data[data.find(":") + 1:])
         elif re.findall("^spd:|^speed:", data):
             config.playback_speed = float(data[data.find(":") + 1:])
-        elif re.findall("^vel_mode:", data):
-            config.vel_mode = data[data.find(":") + 1:].strip()
 
         # response = bytes("{}: {}".format(cur_thread.name, data), 'ascii')
         # self.request.sendall(response)

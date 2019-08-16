@@ -11,7 +11,6 @@ class Config(object):
         self.leds_per_note = int(self._config_file["Leds"]["leds_per_note"])
         self.num_bells = self._config_file["Bells"]["num_bells"]
         self.midi_offset = self._config_file["Bells"]["midi_offset"]
-        self.vel_mode = "lin"  # "exp" "poly"
 
         """  LUTS  """
         self.len = self.notes_matrix.size * self.leds_per_note
@@ -85,13 +84,5 @@ class Config(object):
 
     def map_velocity(self, velocity):
         x = velocity / 127.0
-        if self.vel_mode == "lin":
-            y = x * self.volume
-        elif self.vel_mode == "poly":
-            y = (x**3 - x**2 + x)**1.5
-        elif self.vel_mode == "exp":
-            y = x**2.0
-        else:
-            y = x
-
+        y = x**2.0 * self.volume
         return min(0x7f, max(0, int(y * 127)))
