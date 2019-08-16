@@ -83,7 +83,8 @@ class Config(object):
             address -= 12
         return address
 
-    def map_velocity(self, x):
+    def map_velocity(self, velocity):
+        x = velocity / 127.0
         if self.vel_mode == "lin":
             y = x * self.volume
         elif self.vel_mode == "poly":
@@ -93,4 +94,4 @@ class Config(object):
         else:
             y = x
 
-        return min(0x7f, max(0, int(y)))
+        return min(0x7f, max(0, int(y * 127)))
