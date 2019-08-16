@@ -141,7 +141,7 @@ class LightController(object):
                         try:
                             if key == "range":
                                 kwargs[key] = tuple(self.config.t2m[each] - self.config["Bells"]["midi_offset"] for each in re.findall(re_note, value)[0])
-                            elif key in ["hold", "one_led", "piano"]:
+                            elif key in ["hold", "one_led"]:
                                 kwargs[key] = bool(re.match(re_true, value))
                             elif key == "color":
                                 kwargs[key] = tuple(float(x) for x in re.findall(re_color, value)[0])

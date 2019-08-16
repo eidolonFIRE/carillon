@@ -5,19 +5,13 @@ import numpy as np
 class note_pulse_gradient(base):
     def __init__(self, layout, **kwargs):
         super(note_pulse_gradient, self).__init__(layout, kwargs)
-        self.base_color = np.array(kwargs.get("base_color", (0.0, 0.0, 0.0)))
-        self.high_color = np.array(kwargs.get("high_color", (0.1, 0.1, 1.0)))
-        self.low_color = np.array(kwargs.get("low_color", (1.0, 0.1, 0.1)))
+        self.high_color = np.array(kwargs.get("high_color", (0.0, 0.0, 1.0)))
+        self.low_color = np.array(kwargs.get("low_color", (1.0, 0.0, 0.0)))
         self.hold = kwargs.get("hold", False)
-        self.piano = kwargs.get("piano", False)
         self.active_notes = {}
 
     def set_led(self, note, vel, leds):
-        color_target = color_blend(self.low_color, self.high_color, float(note) / self.lut.notes_matrix.size)
-        if self.piano:
-            color = color_blend(color_target, self.base_color, vel / 127.0)
-        else:
-            color = color_target
+        color = color_blend(self.low_color, self.high_color, float(note) / self.lut.notes_matrix.size)
 
         # set LEDs
         idx = self.lut.n2i[note]

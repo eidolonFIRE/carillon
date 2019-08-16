@@ -23,10 +23,6 @@ leds.text_cmd("add note_pulse_gradient hold=true")
 leds.cmd_queue = mp.Queue()
 leds.midi_queue = mp.Queue()
 
-config.transpose = 0
-config.playback_speed = 1.0
-config.playback_volume = 1.0
-
 ALIVE = True
 HALT_PLAYBACK = False
 
@@ -155,9 +151,11 @@ class ThreadedTCPRequestHandler(socketserver.BaseRequestHandler):
         elif re.findall("^pat:", data):
             leds.cmd_queue.put(data[4:].strip())
         elif re.findall("^vol:|^volume:", data):
-            config.playback_volume = float(data[data.find(":") + 1])
+            config.volume = float(data[data.find(":") + 1:])
         elif re.findall("^spd:|^speed:", data):
-            config.playback_speed = float(data[data.find(":") + 1])
+            config.playback_speed = float(data[data.find(":") + 1:])
+        elif re.findall("^vel_mode:", data):
+            config.vel_mode = data[data.find(":") + 1:].strip()
 
         # response = bytes("{}: {}".format(cur_thread.name, data), 'ascii')
         # self.request.sendall(response)

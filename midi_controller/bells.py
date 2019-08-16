@@ -22,8 +22,6 @@ class BellsController(object):
 
         # initial states
         self.last_rung = {}
-        self.num_bells = config["Bells"]["num_bells"]
-        self.midi_offset = config["Bells"]["midi_offset"]
         self._sustain = False
         self._sustain_notes = set()
         self.mortello = False
@@ -38,7 +36,7 @@ class BellsController(object):
 
     def _tx(self, address, cmd, value):
         assert cmd.value is not 0x0, "Command value 0x0 is reserved!"
-        self.tty.write(bytes([0xC0 | (address & 0x3F), cmd.value & 0x7F, value & 0x7F]))
+        self.tty.write(bytes([0xC0 | (self.config.map_note(address) & 0x3F), cmd.value & 0x7F, value & 0x7F]))
 
     """ -------------------------- PUBLIC API -------------------------- """
 
@@ -48,7 +46,7 @@ class BellsController(object):
             msg.note += self.config.transpose
 
         if msg.type == 'note_on' and msg.velocity > 0:
-            self.ring(msg.note, max(1, int(msg.velocity * self.config.playback_volume)))
+            self.ring(msg.note, msg.velocity)
         elif msg.type == 'note_off' or (hasattr(msg, "velocity") and msg.velocity == 0):
             self.damp(msg.note)
 
@@ -56,8 +54,8 @@ class BellsController(object):
             if msg.control == 64:
                 self.sustain = msg.value >= 64
             elif msg.control == 5:
-                self.config.playback_volume = min(1.0, msg.value / 127.0)
-                print("Volume: {:.2}x".format(self.config.playback_volume))
+                self.config.volume = min(1.0, msg.value / 127.0)
+                print("Volume: {:.2}x".format(self.config.volume))
 
     def pedal_sustain_on(self):
         self._sustain = True
@@ -85,22 +83,13 @@ class BellsController(object):
     def pedal_mortello_off(self):
         self.mortello = False
 
-    def map_note(self, note):
-        # bell index from midi note
-        address = note - self.midi_offset
-        # wrap note into supported octaves
-        while address < 0:
-            address += 12
-        while address >= self.num_bells:
-            address -= 12
-        return address
-
     def ring(self, note, velocity):
+        velocity = self.config.map_velocity(velocity)
         if self.mortello:
             self.damp(note, duration=0xF)
-            self._tx(self.map_note(note), BellCommand.RING_M, velocity)
+            self._tx(note, BellCommand.RING_M, velocity)
         else:
-            self._tx(self.map_note(note), BellCommand.RING, velocity)
+            self._tx(note, BellCommand.RING, velocity)
         self.last_rung[note] = time()
 
     def damp(self, note, duration=None):
@@ -112,16 +101,16 @@ class BellsController(object):
                     duration = min(0x1F, max(0xC, int(0x1F - 8 * (time() - self.last_rung[note]))))
                 else:
                     duration = 0
-            self._tx(self.map_note(note), BellCommand.DAMP, duration)
+            self._tx(note, BellCommand.DAMP, duration)
 
     def set_clapper_min(self, note, value):
-        self._tx(self.map_note(note), BellCommand.SET_CLAPPER_MIN, value)
+        self._tx(note, BellCommand.SET_CLAPPER_MIN, value)
 
     def set_clapper_max(self, note, value):
-        self._tx(self.map_note(note), BellCommand.SET_CLAPPER_MAX, value)
+        self._tx(note, BellCommand.SET_CLAPPER_MAX, value)
 
     def commit_eeprom(self, note):
-        self._tx(self.map_note(note), BellCommand.COMMIT_E2, 0x1D)
+        self._tx(note, BellCommand.COMMIT_E2, 0x1D)
 
     def close(self):
         self.tty.close()

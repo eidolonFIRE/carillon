@@ -3,12 +3,15 @@ import json
 
 
 class Config(object):
-    """ LED layout configurations """
+    """ LED/Bells layout and configurations """
     def __init__(self, config_filename):
         """  Config  """
         self._config_file = json.load(open(config_filename, 'r'))
         self.notes_matrix = np.array(self._config_file["Leds"]["note_array"])
         self.leds_per_note = int(self._config_file["Leds"]["leds_per_note"])
+        self.num_bells = self._config_file["Bells"]["num_bells"]
+        self.midi_offset = self._config_file["Bells"]["midi_offset"]
+        self.vel_mode = "lin"  # "exp" "poly"
 
         """  LUTS  """
         self.len = self.notes_matrix.size * self.leds_per_note
@@ -41,6 +44,9 @@ class Config(object):
             ["bb", 22],
             ["b", 23],
         ]
+        self.volume = 1.0
+        self.transpose = 0
+        self.playback_speed = 1.0
 
         self._build_LUTs()
 
@@ -66,3 +72,25 @@ class Config(object):
         for octave in range(8):
             for text, note in self._note_list:
                 self.t2m[text + str(octave)] = note + 12 * octave
+
+    def map_note(self, note):
+        # bell index from midi note
+        address = note - self.midi_offset
+        # wrap note into supported octaves
+        while address < 0:
+            address += 12
+        while address >= self.num_bells:
+            address -= 12
+        return address
+
+    def map_velocity(self, x):
+        if self.vel_mode == "lin":
+            y = x * self.volume
+        elif self.vel_mode == "poly":
+            y = (x**3 - x**2 + x)**1.5
+        elif self.vel_mode == "exp":
+            y = x**2.0
+        else:
+            y = x
+
+        return min(0x7f, max(0, int(y)))
