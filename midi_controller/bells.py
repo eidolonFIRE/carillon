@@ -31,8 +31,8 @@ class BellsController(object):
 
         # push calibration to bells
         for idx, each in enumerate(config["Bells"]["calibration"]):
-            self.set_clapper_min(idx + self.midi_offset, each[0])
-            self.set_clapper_max(idx + self.midi_offset, each[1])
+            self.set_clapper_min(idx + self.config.midi_offset, each[0])
+            self.set_clapper_max(idx + self.config.midi_offset, each[1])
 
     def _tx(self, address, cmd, value):
         assert cmd.value is not 0x0, "Command value 0x0 is reserved!"
