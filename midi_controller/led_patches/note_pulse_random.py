@@ -26,7 +26,7 @@ class note_pulse_random(base):
                 self.active_notes[event.note] = event.velocity
                 color = color_wheel(random())
                 self._note_colors[event.note] = color
-                self.set_led(event.note, event.velocity, color, leds)
+                self.set_led(event.note, color, leds)
             elif event.type == "note_on" and event.velocity == 0 or event.type == "note_off":
                 self.active_notes[event.note] = event.velocity
 
