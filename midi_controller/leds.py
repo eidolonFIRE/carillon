@@ -119,13 +119,46 @@ class LightController(object):
 
     def text_cmd(self, cmd):
         """ parse and execute pattern commands from strings """
-        re_name = "\s*([\w_]+)"
-        re_args = "([\w_]+)=([\w_:\(\)\.,]+)"
-        re_note = "([a-z0-9#]+):([a-z0-9#]+)"
-        re_color = "\(([0-9\.]+),([0-9\.]+),([0-9\.]+)\)"
-        re_true = "(true|yes|)"
+        re_range = re.compile("([a-z0-9#]+):([a-z0-9#]+)")
+        re_color = re.compile("\(([0-9\.]+),([0-9\.]+),([0-9\.]+)\)")
+        re_args = re.compile("[^()\s][\w:]+|\([\w\s\.,]+\)")
+        re_pats = "|".join(("^" + x) for x in patch_classes.keys())
 
-        cmd = cmd.lower()
+        colors = {
+            "red": (1, 0, 0),
+            "green": (0, 1, 0),
+            "blue": (0, 0, 1),
+            "orange": (1, 0.5, 0),
+            "yellow": (1, 1, 0),
+            "purple": (1, 0, 1),
+            "cyan": (0, 1, 1),
+        }
+
+        for line in cmd.lower().split(";"):
+            line = line.strip()
+
+            if line.startswith("clear"):
+                # stop all patches
+                for each in self.active_pats:
+                    each.state = State.STOP
+
+            else:
+                # parse patch with args
+                patch_match = re_pats.match(line)
+                if patch_match:
+                    # handle args
+                    kwargs = {}
+                    for arg in re_args.findall("line")[1:]:
+                        kwargs["range"] = re_range.match(arg).string
+
+                    self.start_patch(patch_match.string, **kwargs)
+                else:
+                    print("No valid LED patch found in \"{}\"".format(line))
+
+
+
+
+
 
         if re.findall("^add", cmd):
             cmd = cmd[3:]
@@ -156,20 +189,6 @@ class LightController(object):
                 else:
                     print("Error: Unrecognized patch \"{}\"".format(name[0]))
 
-        elif re.findall("^rem", cmd):
-            cmd = cmd[3:]
-            # stop a pattern
-            name = re.findall(re_name, cmd)
-            if len(name):
-                if name[0] in patch_classes.keys():
-                    self.stop_patch(name[0])
-                else:
-                    print("Error: Unrecognized patch \"{}\"".format(name[0]))
-
-        elif re.findall("^clear", cmd):
-            # stop all patterns
-            for each in self.active_pats:
-                each.state = State.STOP
 
         else:
             print("Error: Unable to parse command \"{}\"".format(cmd))
