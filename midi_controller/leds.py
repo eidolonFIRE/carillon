@@ -35,19 +35,11 @@ class LedInterface(object):
         self.length = length
         self.buffer = np.zeros((length, 3))
 
-    @staticmethod
-    def color_to_int(color):
-        temp = color * 255.0
-        return (
-            (max(0, min(255, int(temp[0]))) << 16) |
-            (max(0, min(255, int(temp[1]))) << 8) |
-            (max(0, min(255, int(temp[2])))))
-
     def flush(self):
         """ Flush buffer to strip
         """
-        for x in range(self.length):
-            self._hw._led_data[x] = LedInterface.color_to_int(self.buffer[x])
+        buf = np.minimum(np.maximum(np.array(self.buffer * 255, np.uint32), 0), 255)
+        self._hw._led_data = buf[:, 0] << 16 + buf[:, 1] << 8 + buf[:, 2]
         self._hw.show()
 
     def __getitem__(self, idx):
@@ -69,7 +61,7 @@ class LightController(object):
             config["Leds"]["channel"]
         )
         self.active_pats = []
-        self.default_off_pat = patch_classes["off"](self.config)
+        self.default_off_pat = patch_classes["fade"](self.config)
 
     def close(self):
         if hasattr(self.leds._hw, "close"):
@@ -115,23 +107,23 @@ class LightController(object):
                     if name != each.__class__.__name__:
                         each.state = State.STOP
         else:
-            print("Unknown patch \"%s\"" % name)
+            print("Unknown patch \"{}\"".fromat(name))
 
     def text_cmd(self, cmd):
         """ parse and execute pattern commands from strings """
         re_range = re.compile("([a-z0-9#]+):([a-z0-9#]+)")
-        re_color = re.compile("\(([0-9\.]+),([0-9\.]+),([0-9\.]+)\)")
-        re_args = re.compile("[^()\s][\w:]+|\([\w\s\.,]+\)")
-        re_pats = "|".join(("^" + x) for x in patch_classes.keys())
+        re_color = re.compile("\(\s*([\d]+)\s*,?\s*([\d]+)\s*,?\s*([\d]+)\s*\)")
+        #re_args = re.compile("[^()\s][\w:]+|\([\w\s\.,]+\)")
+        re_pats = re.compile("|".join(("^" + x) for x in patch_classes.keys()))
 
         colors = {
-            "red": (1, 0, 0),
-            "green": (0, 1, 0),
-            "blue": (0, 0, 1),
-            "orange": (1, 0.5, 0),
-            "yellow": (1, 1, 0),
-            "purple": (1, 0, 1),
-            "cyan": (0, 1, 1),
+            "red": "(255, 0, 0)",
+            "green": "(0, 255, 0)",
+            "blue": "(0, 0, 255)",
+            "orange": "(255, 128, 0)",
+            "yellow": "(255, 255, 0)",
+            "purple": "(255, 0, 255)",
+            "cyan": "(0, 255, 255)",
         }
 
         for line in cmd.lower().split(";"):
@@ -145,52 +137,35 @@ class LightController(object):
             else:
                 # parse patch with args
                 patch_match = re_pats.match(line)
+                print(patch_match)
+                print(line)
                 if patch_match:
+                    patch_name = patch_match.string
+                    print("patch_name: {}".format(patch_name))
+
                     # handle args
                     kwargs = {}
-                    for arg in re_args.findall("line")[1:]:
-                        kwargs["range"] = re_range.match(arg).string
 
-                    self.start_patch(patch_match.string, **kwargs)
+                    # get colors
+                    for color, value in colors.items():
+                        line = line.replace(color, value)
+                    kwargs["colors"] = np.array(re_color.findall(line)).astype(np.float) / 255.0
+
+                    # misc flags
+                    kwargs["hold"] = "hold" in line
+                    kwargs["random"] = "random" in line
+
+                    # note range
+                    m_range = re_range.findall(line)
+                    if len(m_range):
+                        kwargs["range"] = tuple(self.config.t2m[each] - self.config["Bells"]["midi_offset"] for each in m_range[0])
+
+                    try:
+                        print(patch_match)
+                        self.start_patch(patch_name, **kwargs)
+                    except:
+                        print("Error: Failed to start patch \"{}\"\nWith args: {}".format(patch_name, str(kwargs)))
                 else:
                     print("No valid LED patch found in \"{}\"".format(line))
-
-
-
-
-
-
-        if re.findall("^add", cmd):
-            cmd = cmd[3:]
-            # start a pattern
-            name = re.findall(re_name, cmd)
-            args = re.findall(re_args, cmd)
-            if len(name):
-                if name[0] in patch_classes.keys():
-                    # handle args
-                    kwargs = {}
-                    for key, value in args:
-                        print(key, value)
-                        try:
-                            if key == "range":
-                                kwargs[key] = tuple(self.config.t2m[each] - self.config["Bells"]["midi_offset"] for each in re.findall(re_note, value)[0])
-                            elif key in ["hold", "one_led"]:
-                                kwargs[key] = bool(re.match(re_true, value))
-                            elif key == "color":
-                                kwargs[key] = tuple(float(x) for x in re.findall(re_color, value)[0])
-                            elif key == "rate":
-                                kwargs[key] = float(value)
-                            else:
-                                kwargs[key] = eval(value)
-                        except:
-                            print("Error: failed to parse \"{}={}\"".format(key, value))
-
-                    self.start_patch(name[0], **kwargs)
-                else:
-                    print("Error: Unrecognized patch \"{}\"".format(name[0]))
-
-
-        else:
-            print("Error: Unable to parse command \"{}\"".format(cmd))
 
         self.print_active_pats()

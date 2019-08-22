@@ -2,18 +2,16 @@ from led_patches.base import base, State
 import numpy as np
 
 
-class note_pulse_color(base):
+class simple(base):
     def __init__(self, layout, **kwargs):
-        super(note_pulse_color, self).__init__(layout, kwargs)
+        super(simple, self).__init__(layout, kwargs)
         self.color = np.array(kwargs.get("color", (1.0, 1.0, 1.0)))
-        self.hold = kwargs.get("hold", False)
         self.active_notes = {}
 
     def set_led(self, idx, leds):
         leds[idx] = self.color
-        if not self.one_led:
-            leds[idx + 1] = self.color
-            leds[idx + 2] = self.color
+        leds[idx + 1] = self.color
+        leds[idx + 2] = self.color
 
     def _step(self, state, leds):
         # handle events

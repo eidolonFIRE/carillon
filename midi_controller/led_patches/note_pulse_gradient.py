@@ -7,7 +7,6 @@ class note_pulse_gradient(base):
         super(note_pulse_gradient, self).__init__(layout, kwargs)
         self.high_color = np.array(kwargs.get("high_color", (0.0, 0.0, 1.0)))
         self.low_color = np.array(kwargs.get("low_color", (1.0, 0.0, 0.0)))
-        self.hold = kwargs.get("hold", False)
         self.active_notes = {}
 
     def set_led(self, note, vel, leds):
@@ -16,9 +15,8 @@ class note_pulse_gradient(base):
         # set LEDs
         idx = self.lut.n2i[note]
         leds[idx] = color
-        if not self.one_led:
-            leds[idx + 1] = color
-            leds[idx + 2] = color
+        leds[idx + 1] = color
+        leds[idx + 2] = color
 
     def _step(self, state, leds):
         # handle events

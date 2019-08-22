@@ -40,7 +40,7 @@ class base(object):
         self.events = deque()
         self.state = State.START
         self.range = kwargs.get("range", (0, 100))
-        self.one_led = kwargs.get("one_led", False)
+        self.hold = kwargs.get("hold", False)
 
     def event(self, event):
         # filter range

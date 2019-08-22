@@ -18,8 +18,8 @@ import threading
 config = Config("config.json")
 bells = BellsController(config)
 leds = LightController(config)
-leds.text_cmd("add fade_to_color")
-leds.text_cmd("add note_pulse_gradient hold=true")
+leds.text_cmd("fade")
+leds.text_cmd("simple hold")
 leds.cmd_queue = mp.Queue()
 leds.midi_queue = mp.Queue()
 
@@ -39,7 +39,7 @@ IS_RASPBERRY = "raspberrypi" in _os_type or "arm" in _os_type
 def sigint_handler(signal, frame):
     global ALIVE
     ALIVE = False
-    print("Keyboard Interrupt")
+    print("Keyboard Interrupt, HALTING")
 
 
 def handle_midi_event(msg):
@@ -204,10 +204,12 @@ def main():
         mort_pedal.when_pressed = bells.pedal_mortello_on
         mort_pedal.when_released = bells.pedal_mortello_off
 
-    # thread_leds.join()
     process_leds.join()
+    print("a")
     bells.close()
+    print("b")
     cmd_server.server_close()
+    print("c")
     cmd_server.shutdown()
 
 
