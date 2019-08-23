@@ -157,6 +157,7 @@ class LightController(object):
                     kwargs["hold"] = "hold" in line
                     kwargs["random"] = "random" in line
                     kwargs["rainbow"] = "rainbow" in line
+                    kwargs["all"] = "all" in line
 
                     # note range
                     m_range = re_range.findall(line)

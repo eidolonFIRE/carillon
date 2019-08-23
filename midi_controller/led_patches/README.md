@@ -52,7 +52,7 @@ _Color chosen from gradient based on note value._
 _Spin colors around inside bell._
 ```
   - range   : Limit patch to note range.
-  - random  : Chose random colors to spin per note event.
   - rate    : How fast to initially spin. _(float from 0.0 to 1.0)_
-  - <colors>: Up to three colors can be specified. Each will be interpolated equal-radially and spun.
+  - rainbow : Use red, green, blue as `colors`.
+  - <colors>: Three colors must be specified. 
 ```

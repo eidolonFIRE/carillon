@@ -1,6 +1,7 @@
 from led_patches.base import base, State, color_wheel
 import numpy as np
 from random import random
+from time import time
 
 
 class simple(base):
@@ -17,12 +18,17 @@ class simple(base):
         self.color_index = 0
 
     def set_led(self, idx, color, leds):
-        leds[idx] = color
-        leds[idx + 1] = color
-        leds[idx + 2] = color
+        if self.all:
+            leds[:] = color
+        else:
+            leds[idx] = color
+            leds[idx + 1] = color
+            leds[idx + 2] = color
 
     def get_next_color(self):
-        if self.random:
+        if self.rainbow:
+            return color_wheel(time() / 20)
+        elif self.random:
             return color_wheel(random())
         else:
             color = self.colors[self.color_index]

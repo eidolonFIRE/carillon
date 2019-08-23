@@ -1,6 +1,5 @@
 from led_patches.base import base, State
 import numpy as np
-from random import random
 
 
 class spin(base):
@@ -9,7 +8,7 @@ class spin(base):
         self.colors = kwargs.get("colors", [])
         self.rainbow = kwargs.get("rainbow", False)
         self.rate = kwargs.get("rate", 0.1) * 10
-        if not len(self.colors) or self.rainbow:
+        if len(self.colors) < 3 or self.rainbow:
             self.colors = np.array([(1, 0, 0), (0, 1, 0), (0, 0, 1)])
         self.active_notes = {}
         self.spin_pos = {}
@@ -32,7 +31,7 @@ class spin(base):
             if event.type == "note_on" and event.velocity > 0:
                 self.active_notes[event.note] = True
                 i = self.lut.n2i[event.note]
-                self.spin_pos[i] = 6 + random()
+                self.spin_pos[i] = 5 * event.velocity / 127.0 + 1
                 self.set_led(i, leds)
             elif event.type == "note_on" and event.velocity == 0 or event.type == "note_off":
                 self.active_notes[event.note] = False
