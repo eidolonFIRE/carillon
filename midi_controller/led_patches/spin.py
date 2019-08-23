@@ -1,7 +1,6 @@
-from led_patches.base import base, State, color_wheel
+from led_patches.base import base, State
 import numpy as np
 from random import random
-from time import time
 
 
 class spin(base):
@@ -9,44 +8,22 @@ class spin(base):
         super(spin, self).__init__(layout, kwargs)
         self.colors = kwargs.get("colors", [])
         self.rainbow = kwargs.get("rainbow", False)
-        self.random = kwargs.get("random", False)
         self.rate = kwargs.get("rate", 0.1) * 10
-        if not len(self.colors) and not self.random:
-            self.colors = np.array([(1, 1, 1)])
-        if self.rainbow:
+        if not len(self.colors) or self.rainbow:
             self.colors = np.array([(1, 0, 0), (0, 1, 0), (0, 0, 1)])
         self.active_notes = {}
-        self.last_color = {}
-        self.color_index = 0
+        self.spin_pos = {}
 
-    def set_led(self, idx, color, leds):
-        
-
-        if len(self.colors) == 3:
-            leds[idx] *= 0
-            leds[idx + 1] *= 0
-            leds[idx + 2] *= 0
-            for x in range(3):
-                sweep = (time() * self.rate + x / 3.0) % 1.0
-                leds[idx] += self.colors[x] * (1.0 - min(abs(min(1, sweep * 3)), abs(min(1, (sweep - 1.0) * 3))))
-                leds[idx + 1] += self.colors[x] * (1.0 - abs(min(1, (sweep - 0.33333) * 3)))
-                leds[idx + 2] += self.colors[x] * max(0, (1.0 - abs(min(1, (sweep - 0.66666) * 3))))
-        else:
-            sweep = (time() * self.rate) % 1.0
-            leds[idx] = self.colors[0] * (1.0 - min(abs(min(1, sweep * 3)), abs(min(1, (sweep - 1.0) * 3))))
-            leds[idx + 1] = self.colors[0] * (1.0 - abs(min(1, (sweep - 0.33333) * 3)))
-            leds[idx + 2] = self.colors[0] * max(0, (1.0 - abs(min(1, (sweep - 0.66666) * 3))))
-
-
-    def get_next_color(self):
-        if self.random:
-            return color_wheel(random())
-        else:
-            color = self.colors[self.color_index]
-            self.color_index += 1
-            if self.color_index >= len(self.colors):
-                self.color_index = 0
-            return color
+    def set_led(self, idx, leds):
+        leds[idx] *= 0
+        leds[idx + 1] *= 0
+        leds[idx + 2] *= 0
+        for x in range(3):
+            sweep = (self.spin_pos[idx] * self.rate + x / 3.0) % 1.0
+            leds[idx] += self.colors[x] * (1.0 - min(abs(min(1, sweep * 3)), abs(min(1, (sweep - 1.0) * 3))))
+            leds[idx + 1] += self.colors[x] * (1.0 - abs(min(1, (sweep - 0.33333) * 3)))
+            leds[idx + 2] += self.colors[x] * max(0, (1.0 - abs(min(1, (sweep - 0.66666) * 3))))
+        self.spin_pos[idx] *= 0.995
 
     def _step(self, state, leds):
         # handle events
@@ -55,9 +32,8 @@ class spin(base):
             if event.type == "note_on" and event.velocity > 0:
                 self.active_notes[event.note] = True
                 i = self.lut.n2i[event.note]
-                color = self.get_next_color()
-                self.set_led(i, color, leds)
-                self.last_color[i] = color
+                self.spin_pos[i] = 6 + random()
+                self.set_led(i, leds)
             elif event.type == "note_on" and event.velocity == 0 or event.type == "note_off":
                 self.active_notes[event.note] = False
 
@@ -65,7 +41,7 @@ class spin(base):
         for note, value in self.active_notes.items():
             if value:
                 i = self.lut.n2i[note]
-                self.set_led(i, self.last_color[i], leds)
+                self.set_led(i, leds)
 
         if state == State.START:
             return State.RUNNING
