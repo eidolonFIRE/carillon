@@ -14,12 +14,16 @@ import socket
 import socketserver
 import threading
 
+_os_type = " ".join(os.uname())
+IS_RASPBERRY = "raspberrypi" in _os_type or "arm" in _os_type
+
 # Spin up main objects
 config = Config("config.json")
-bells = BellsController(config)
+bells = BellsController(config, is_raspberry=IS_RASPBERRY)
 leds = LightController(config)
 leds.text_cmd("fade")
-leds.text_cmd("simple hold")
+# leds.text_cmd("simple hold blue green")
+leds.text_cmd("simple hold random")
 leds.cmd_queue = mp.Queue()
 leds.midi_queue = mp.Queue()
 
@@ -31,9 +35,6 @@ _s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 _s.connect(("8.8.8.8", 80))
 MY_IP = _s.getsockname()[0]
 _s.close()
-
-_os_type = " ".join(os.uname())
-IS_RASPBERRY = "raspberrypi" in _os_type or "arm" in _os_type
 
 
 def sigint_handler(signal, frame):
@@ -122,7 +123,7 @@ def thread_play_midi_file(filename):
 
 def thread_midi_server(port):
     global ALIVE
-    print("Starting midi_server ({}:{})".format(MY_IP, port))
+    print("Starting midi_server  {}:{}".format(MY_IP, port))
     with PortServer('localhost', port) as server:
         while True:
             client = server.accept()
@@ -191,7 +192,7 @@ def main():
 
     cmd_server = ThreadedTCPServer(("localhost", 9081), ThreadedTCPRequestHandler)
     thread_cmd_server = threading.Thread(target=cmd_server.serve_forever, daemon=True)
-    print("Starting cmd_server ( {}:{} )".format(MY_IP, 9081))
+    print("Starting cmd_server   {}:{}".format(MY_IP, 9081))
     thread_cmd_server.start()
 
     # detect OS and load gpio pedals if on raspberry pi
@@ -204,12 +205,9 @@ def main():
         mort_pedal.when_pressed = bells.pedal_mortello_on
         mort_pedal.when_released = bells.pedal_mortello_off
 
-    process_leds.join()
-    print("a")
+    process_leds.join(5)
     bells.close()
-    print("b")
     cmd_server.server_close()
-    print("c")
     cmd_server.shutdown()
 
 

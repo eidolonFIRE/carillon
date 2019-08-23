@@ -1,4 +1,5 @@
 from enum import Enum
+import numpy as np
 import pygame
 
 pygame.init()
@@ -22,7 +23,7 @@ class Adafruit_NeoPixel_viz(object):
         self.dma = dma
         self.channel = channel
         self.strip_type = strip_type
-        self._led_data = [0] * length
+        self._led_data = np.array(length, np.uint32)
 
     def begin(self):
         myDisplay.fill((10, 10, 10))

@@ -1,25 +1,29 @@
 from led_patches.base import base, State, color_wheel
 import numpy as np
 from random import random
+from time import time
+import math
 
 
-class simple(base):
+class spin(base):
     def __init__(self, layout, **kwargs):
-        super(simple, self).__init__(layout, kwargs)
+        super(spin, self).__init__(layout, kwargs)
         self.colors = kwargs.get("colors", [])
         self.rainbow = kwargs.get("rainbow", False)
         self.random = kwargs.get("random", False)
-        self.all = kwargs.get("all", False)
+        self.rate = kwargs.get("rate", 0.5)
         if not len(self.colors):
-            self.colors = np.array([(0, 0, 0)])
+            self.colors = np.array([(1, 1, 1), (0, 0, 0)])
         self.active_notes = {}
         self.last_color = {}
         self.color_index = 0
 
     def set_led(self, idx, color, leds):
-        leds[idx] = color
-        leds[idx + 1] = color
-        leds[idx + 2] = color
+        sweep = (time()) % 1.0
+
+        leds[idx] = color * (1.0 - min(abs(min(1, sweep * 3)), abs(min(1, (sweep - 1.0) * 3))))
+        leds[idx + 1] = color * (1.0 - abs(min(1, (sweep - 0.33333) * 3)))
+        leds[idx + 2] = color * max(0, (1.0 - abs(min(1, (sweep - 0.66666) * 3))))
 
     def get_next_color(self):
         if self.random:
@@ -45,11 +49,10 @@ class simple(base):
                 self.active_notes[event.note] = False
 
         # hold value while note active
-        if self.hold:
-            for note, value in self.active_notes.items():
-                if value:
-                    i = self.lut.n2i[note]
-                    self.set_led(i, self.last_color[i], leds)
+        for note, value in self.active_notes.items():
+            if value:
+                i = self.lut.n2i[note]
+                self.set_led(i, self.last_color[i], leds)
 
         if state == State.START:
             return State.RUNNING

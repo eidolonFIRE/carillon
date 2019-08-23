@@ -15,7 +15,7 @@ class BellCommand(Enum):
 
 class BellsController(object):
     """Hardware controller for Bells"""
-    def __init__(self, config):
+    def __init__(self, config, is_raspberry=True):
         super(BellsController, self).__init__()
 
         self.config = config
@@ -27,12 +27,20 @@ class BellsController(object):
         self.mortello = False
 
         # open serial ouput
-        self.tty = serial.Serial(config["Bells"]["control_tty"], int(config["Bells"]["control_baud"]), bytesize=8, parity='N', stopbits=1)
+        if is_raspberry:
+            self.tty = serial.Serial(config["Bells"]["control_tty"], int(config["Bells"]["control_baud"]), bytesize=8, parity='N', stopbits=1)
+        else:
+            # stub out serial api
+            self.tty = None
+            self._tx = self._tx_stub
 
         # push calibration to bells
         for idx, each in enumerate(config["Bells"]["calibration"]):
             self.set_clapper_min(idx + self.config.midi_offset, each[0])
             self.set_clapper_max(idx + self.config.midi_offset, each[1])
+
+    def _tx_stub(self, address, cmd, value):
+        pass
 
     def _tx(self, address, cmd, value):
         assert cmd.value is not 0x0, "Command value 0x0 is reserved!"
@@ -113,4 +121,5 @@ class BellsController(object):
         self._tx(note, BellCommand.COMMIT_E2, 0x1D)
 
     def close(self):
-        self.tty.close()
+        if self.tty:
+            self.tty.close()

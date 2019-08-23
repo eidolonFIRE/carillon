@@ -6,7 +6,7 @@ import re
 
 
 # detect and load patches
-patch_files = [f.replace(".py", "") for f in os.listdir("led_patches") if os.path.isfile(os.path.join("led_patches", f))]
+patch_files = [f.replace(".py", "") for f in os.listdir("led_patches") if (os.path.isfile(os.path.join("led_patches", f)) and f.endswith(".py"))]
 patch_classes = {}
 print("Importing Patches:")
 for name in patch_files:
@@ -39,7 +39,7 @@ class LedInterface(object):
         """ Flush buffer to strip
         """
         buf = np.minimum(np.maximum(np.array(self.buffer * 255, np.uint32), 0), 255)
-        self._hw._led_data = buf[:, 0] << 16 + buf[:, 1] << 8 + buf[:, 2]
+        self._hw._led_data = (buf[:, 0] << 16) + (buf[:, 1] << 8) + buf[:, 2]
         self._hw.show()
 
     def __getitem__(self, idx):
@@ -124,6 +124,8 @@ class LightController(object):
             "yellow": "(255, 255, 0)",
             "purple": "(255, 0, 255)",
             "cyan": "(0, 255, 255)",
+            "black": "(0, 0, 0)",
+            "off": "(0, 0, 0)",
         }
 
         for line in cmd.lower().split(";"):
@@ -136,11 +138,9 @@ class LightController(object):
 
             else:
                 # parse patch with args
-                patch_match = re_pats.match(line)
-                print(patch_match)
-                print(line)
-                if patch_match:
-                    patch_name = patch_match.string
+                patch_match = re_pats.findall(line)
+                if len(patch_match):
+                    patch_name = patch_match[0]
                     print("patch_name: {}".format(patch_name))
 
                     # handle args
@@ -161,7 +161,6 @@ class LightController(object):
                         kwargs["range"] = tuple(self.config.t2m[each] - self.config["Bells"]["midi_offset"] for each in m_range[0])
 
                     try:
-                        print(patch_match)
                         self.start_patch(patch_name, **kwargs)
                     except:
                         print("Error: Failed to start patch \"{}\"\nWith args: {}".format(patch_name, str(kwargs)))
