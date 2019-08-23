@@ -182,7 +182,10 @@ def process_update_leds():
 # /////////////////////////// MAIN ///////////////////////////
 def main():
     # mp.set_start_method('spawn')
-    process_leds = mp.Process(target=process_update_leds)
+    # process_leds = mp.Process(target=process_update_leds)
+    # process_leds.start()
+
+    process_leds = threading.Thread(target=process_update_leds, daemon=True)
     process_leds.start()
 
     thread_device = threading.Thread(target=thread_device_monitor, daemon=True)
@@ -205,7 +208,7 @@ def main():
         mort_pedal.when_pressed = bells.pedal_mortello_on
         mort_pedal.when_released = bells.pedal_mortello_off
 
-    process_leds.join(5)
+    process_leds.join()
     bells.close()
     cmd_server.server_close()
     cmd_server.shutdown()

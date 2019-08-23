@@ -2,7 +2,6 @@ from led_patches.base import base, State, color_wheel
 import numpy as np
 from random import random
 from time import time
-import math
 
 
 class spin(base):
@@ -11,15 +10,15 @@ class spin(base):
         self.colors = kwargs.get("colors", [])
         self.rainbow = kwargs.get("rainbow", False)
         self.random = kwargs.get("random", False)
-        self.rate = kwargs.get("rate", 0.5)
-        if not len(self.colors):
+        self.rate = kwargs.get("rate", 0.5) * 10
+        if not len(self.colors) and not self.random:
             self.colors = np.array([(1, 1, 1), (0, 0, 0)])
         self.active_notes = {}
         self.last_color = {}
         self.color_index = 0
 
     def set_led(self, idx, color, leds):
-        sweep = (time()) % 1.0
+        sweep = (time() * self.spin_rate) % 1.0
 
         leds[idx] = color * (1.0 - min(abs(min(1, sweep * 3)), abs(min(1, (sweep - 1.0) * 3))))
         leds[idx + 1] = color * (1.0 - abs(min(1, (sweep - 0.33333) * 3)))

@@ -10,7 +10,7 @@ class simple(base):
         self.rainbow = kwargs.get("rainbow", False)
         self.random = kwargs.get("random", False)
         self.all = kwargs.get("all", False)
-        if not len(self.colors):
+        if not len(self.colors) and not self.random:
             self.colors = np.array([(0, 0, 0)])
         self.active_notes = {}
         self.last_color = {}
