@@ -143,7 +143,7 @@ class LightController(object):
                 patch_match = re_pats.findall(line)
                 if len(patch_match):
                     patch_name = patch_match[0]
-                    print("patch_name: {}".format(patch_name))
+                    # print("patch_name: {}".format(patch_name))
 
                     # handle args
                     kwargs = {}
@@ -156,6 +156,7 @@ class LightController(object):
                     # misc flags
                     kwargs["hold"] = "hold" in line
                     kwargs["random"] = "random" in line
+                    kwargs["rainbow"] = "rainbow" in line
 
                     # note range
                     m_range = re_range.findall(line)

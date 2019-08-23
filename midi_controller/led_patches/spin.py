@@ -10,19 +10,33 @@ class spin(base):
         self.colors = kwargs.get("colors", [])
         self.rainbow = kwargs.get("rainbow", False)
         self.random = kwargs.get("random", False)
-        self.rate = kwargs.get("rate", 0.5) * 10
+        self.rate = kwargs.get("rate", 0.1) * 10
         if not len(self.colors) and not self.random:
-            self.colors = np.array([(1, 1, 1), (0, 0, 0)])
+            self.colors = np.array([(1, 1, 1)])
+        if self.rainbow:
+            self.colors = np.array([(1, 0, 0), (0, 1, 0), (0, 0, 1)])
         self.active_notes = {}
         self.last_color = {}
         self.color_index = 0
 
     def set_led(self, idx, color, leds):
-        sweep = (time() * self.spin_rate) % 1.0
+        
 
-        leds[idx] = color * (1.0 - min(abs(min(1, sweep * 3)), abs(min(1, (sweep - 1.0) * 3))))
-        leds[idx + 1] = color * (1.0 - abs(min(1, (sweep - 0.33333) * 3)))
-        leds[idx + 2] = color * max(0, (1.0 - abs(min(1, (sweep - 0.66666) * 3))))
+        if len(self.colors) == 3:
+            leds[idx] *= 0
+            leds[idx + 1] *= 0
+            leds[idx + 2] *= 0
+            for x in range(3):
+                sweep = (time() * self.rate + x / 3.0) % 1.0
+                leds[idx] += self.colors[x] * (1.0 - min(abs(min(1, sweep * 3)), abs(min(1, (sweep - 1.0) * 3))))
+                leds[idx + 1] += self.colors[x] * (1.0 - abs(min(1, (sweep - 0.33333) * 3)))
+                leds[idx + 2] += self.colors[x] * max(0, (1.0 - abs(min(1, (sweep - 0.66666) * 3))))
+        else:
+            sweep = (time() * self.rate) % 1.0
+            leds[idx] = self.colors[0] * (1.0 - min(abs(min(1, sweep * 3)), abs(min(1, (sweep - 1.0) * 3))))
+            leds[idx + 1] = self.colors[0] * (1.0 - abs(min(1, (sweep - 0.33333) * 3)))
+            leds[idx + 2] = self.colors[0] * max(0, (1.0 - abs(min(1, (sweep - 0.66666) * 3))))
+
 
     def get_next_color(self):
         if self.random:
