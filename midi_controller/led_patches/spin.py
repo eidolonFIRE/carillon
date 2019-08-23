@@ -18,7 +18,7 @@ class spin(base):
         leds[idx + 1] *= 0
         leds[idx + 2] *= 0
         for x in range(3):
-            sweep = (self.spin_pos[idx] * self.rate + x / 3.0) % 1.0
+            sweep = (self.spin_pos[idx] * self.rate + x / 3.0 + idx * 0.2) % 1.0
             leds[idx] += self.colors[x] * (1.0 - min(abs(min(1, sweep * 3)), abs(min(1, (sweep - 1.0) * 3))))
             leds[idx + 1] += self.colors[x] * (1.0 - abs(min(1, (sweep - 0.33333) * 3)))
             leds[idx + 2] += self.colors[x] * max(0, (1.0 - abs(min(1, (sweep - 0.66666) * 3))))
@@ -31,7 +31,7 @@ class spin(base):
             if event.type == "note_on" and event.velocity > 0:
                 self.active_notes[event.note] = True
                 i = self.lut.n2i[event.note]
-                self.spin_pos[i] = 5 * event.velocity / 127.0 + 1
+                self.spin_pos[i] = 5 * event.velocity / 127.0 + 2
                 self.set_led(i, leds)
             elif event.type == "note_on" and event.velocity == 0 or event.type == "note_off":
                 self.active_notes[event.note] = False

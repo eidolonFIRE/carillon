@@ -116,6 +116,7 @@ class LightController(object):
         re_range = re.compile("([a-z0-9#]+):([a-z0-9#]+)")
         re_color = re.compile("\(\s*([\d]+)\s*,?\s*([\d]+)\s*,?\s*([\d]+)\s*\)")
         #re_args = re.compile("[^()\s][\w:]+|\([\w\s\.,]+\)")
+        re_number = re.compile("(?:\s+|^)([\d.]+)(?:\s+|$)")
         re_pats = re.compile("|".join(("^" + x) for x in patch_classes.keys()))
 
         colors = {
@@ -158,6 +159,11 @@ class LightController(object):
                     kwargs["random"] = "random" in line
                     kwargs["rainbow"] = "rainbow" in line
                     kwargs["all"] = "all" in line
+
+                    # free numbers (rate)
+                    m_number = re_number.findall(line)
+                    if len(m_number):
+                        kwargs["rate"] = m_number[0]
 
                     # note range
                     m_range = re_range.findall(line)
