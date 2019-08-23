@@ -41,7 +41,7 @@ class LedInterface(object):
         buf = np.minimum(np.maximum(np.array(self.buffer * 255, np.uint32), 0), 255)
         packed_buf = (buf[:, 0] << 16) + (buf[:, 1] << 8) + buf[:, 2]
         for x in range(self.length):
-            self._hw._led_data[x] = packed_buf[x]
+            self._hw._led_data[x] = int(packed_buf[x])
         self._hw.show()
 
     def __getitem__(self, idx):
