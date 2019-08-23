@@ -23,7 +23,7 @@ class Adafruit_NeoPixel_viz(object):
         self.dma = dma
         self.channel = channel
         self.strip_type = strip_type
-        self._led_data = np.array(length, np.uint32)
+        self._led_data = np.zeros(length, np.uint32)
 
     def begin(self):
         myDisplay.fill((10, 10, 10))
