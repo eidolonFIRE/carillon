@@ -68,7 +68,7 @@ class Config(object):
                 self.p2n[(x, y)] = note
 
         # text to midi note
-        for octave in range(8):
+        for octave in range(10):
             for text, note in self._note_list:
                 self.t2m[text + str(octave)] = note + 12 * octave
 

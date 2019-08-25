@@ -26,8 +26,7 @@ class spin(base):
 
     def _step(self, state, leds):
         # handle events
-        if len(self.events):
-            event = self.events.pop()
+        for event in self.events:
             if event.type == "note_on" and event.velocity > 0:
                 self.active_notes[event.note] = True
                 i = self.lut.n2i[event.note]
@@ -35,6 +34,7 @@ class spin(base):
                 self.set_led(i, leds)
             elif event.type == "note_on" and event.velocity == 0 or event.type == "note_off":
                 self.active_notes[event.note] = False
+        self.events.clear()
 
         # hold value while note active
         for note, value in self.active_notes.items():

@@ -3,13 +3,6 @@ import numpy as np
 from collections import deque
 
 
-def color_blend(A, B, ratio=0.5):
-    """ Weighted average of two colors.
-        Note: non luminous preserving!
-    """
-    return A * ratio + (1.0 - ratio) * B
-
-
 def color_wheel(pos, bri=1.0):
     """ Select color from rainbow
     """

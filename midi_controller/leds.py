@@ -182,6 +182,10 @@ class LightController(object):
                     m_range = re_range.findall(line)
                     if len(m_range):
                         kwargs["range"] = tuple(self.config.t2m[each] - self.config["Bells"]["midi_offset"] for each in m_range[0])
+                    else:
+                        # default full range
+                        base = self.config["Bells"]["midi_offset"] - self.config["Bells"]["midi_offset"]
+                        kwargs["range"] = (base, base + self.config["Bells"]["num_bells"])
 
                     try:
                         self.start_patch(patch_name, **kwargs)

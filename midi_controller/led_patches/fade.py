@@ -15,7 +15,10 @@ class fade(base):
         self.rate = float(kwargs.get("rate", 0.05))
 
     def _step(self, state, leds):
-        # TODO: put in range
+        # empty queue
+        self.events.clear()
+
+        # fade colors
         target_color = color_wheel(time() / 30.0) if self.rainbow else self.color
         leds.buffer = leds.buffer * (1.0 - self.rate) + self.rate * target_color
 

@@ -7,10 +7,10 @@ Colors are provided in this format `(0,128,255)`. The numbers represent red, gre
 
 Example:
 ```python
-  clear; # stop all previously running patches so we can start a new set
-  fade; # will fade to off by default
-  simple hold C4:G4 red; # notes played from C4 to G4 will hold red color as long as note held.
-  gradient G4:C6 rainbow; # notes played from G4 to C6 will sample the rainbow and only set the color initially when the note is played.
+  clear;  # stop all previously running patches so we can start a new set
+  fade;  # will fade to off by default
+  simple hold C4:G4 red;  # notes played from C4 to G4 will hold red color as long as note held.
+  gradient G4:C6 rainbow;  # notes played from G4 to C6 will sample the rainbow and only set the color initially when the note is played.
 ```
 
 # LED patches/commands
@@ -21,8 +21,6 @@ Example:
 ### `fade` 
 _Slowly changes the color of all the bells._
 ```
-  - range   : Limit patch to note range.
-  - random  : Choses a random color to fade the bell to. When the color is reached, a new target color is chosen.
   - rainbow : Fade all to a rainbow pattern.
   - rate    : Fade rate. `1.0` is fade instantly, `0.0` is don't fade at all. _(float from 0.0 to 1.0)_
   - <colors>: If `rainbow` flag is not given, the first color provided will be used. If no color given, 
@@ -45,6 +43,7 @@ _Color chosen from gradient based on note value._
   - hold    : Keep LED at color until note released.
   - range   : Limit patch to note range.
   - random  : Instead of using note value, randomly sample gradient.
+  - all     : Apply color to all bells regardless of note played.
   - <colors>: Colors are put in gradient and spaced equally.
 ```
 
