@@ -51,7 +51,9 @@ class LedInterface(object):
         # for x in range(self.length):
             # self._hw._led_data[x] = int(packed_buf[x])
 
-        ctypes.memmove(ctypes.byref(self.raw_buffer), packed_buf, ctypes.sizeof(self.raw_buffer))
+
+
+        ctypes.memmove(ctypes.byref(self.raw_buffer), packed_buf.tobytes(), self.length * 4)
 
         self._hw.show()
 

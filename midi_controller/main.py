@@ -22,9 +22,9 @@ IS_RASPBERRY = "raspberrypi" in _os_type or "arm" in _os_type
 config = Config("config.json")
 bells = BellsController(config, is_raspberry=IS_RASPBERRY)
 leds = LightController(config)
-leds.text_cmd("fade")
+leds.text_cmd("fade rainbow")
 # leds.text_cmd("spin rainbow")
-leds.text_cmd("simple hold random")
+# leds.text_cmd("simple hold random")
 leds.cmd_queue = mp.Queue()
 leds.midi_queue = mp.Queue()
 
