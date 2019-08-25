@@ -38,24 +38,23 @@ class LedInterface(object):
         self.length = length
         self.buffer = np.zeros((length, 3))
 
-        # allocate new array
-        self.raw_buffer = (ctypes.c_uint8 * self.length * 4)()
-        # ws.ws2811_channel_t_leds_set(self._hw._channel, ctypes.byref(self.raw_buffer))
-        pointer = int(re.findall("(0x[\w]+)", ctypes.byref(self.raw_buffer).__str__())[0], 16)
-        ws.set_buffer(self._hw._channel, pointer)
+        if IS_RASPBERRY:
+            # allocate new array
+            self.raw_buffer = (ctypes.c_uint8 * self.length * 4)()
+            pointer = int(re.findall("(0x[\w]+)", ctypes.byref(self.raw_buffer).__str__())[0], 16)
+            ws.set_buffer(self._hw._channel, pointer)
 
     def flush(self):
         """ Flush buffer to strip
         """
         buf = np.minimum(np.maximum(np.array(self.buffer * 255, np.uint32), 0), 255)
         packed_buf = (buf[:, 0] << 16) + (buf[:, 1] << 8) + buf[:, 2]
-        # for x in range(self.length):
-            # self._hw._led_data[x] = int(packed_buf[x])
 
-
-
-        ctypes.memmove(ctypes.byref(self.raw_buffer), packed_buf.tobytes(), self.length * 4)
-
+        if IS_RASPBERRY:
+            ctypes.memmove(ctypes.byref(self.raw_buffer), packed_buf.tobytes(), self.length * 4)
+        else:
+            for x in range(self.length):
+                self._hw._led_data[x] = int(packed_buf[x])
         self._hw.show()
 
     def __getitem__(self, idx):
