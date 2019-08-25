@@ -2,7 +2,7 @@ from bells import BellsController
 from config import Config
 from leds import LightController
 from mido.sockets import PortServer
-from time import sleep
+from time import sleep, time
 import difflib
 import mido
 import multiprocessing as mp
@@ -13,6 +13,7 @@ import signal
 import socket
 import socketserver
 import threading
+
 
 _os_type = " ".join(os.uname())
 IS_RASPBERRY = "raspberrypi" in _os_type or "arm" in _os_type
@@ -174,7 +175,10 @@ def process_update_leds():
             msg = leds.midi_queue.get()
             msg.note = config.map_note(msg.note)
             leds.event(msg)
+        start = time()
         leds.step()
+        end = time()
+        print(end - start)
         sleep(1.0 / 100)
     leds.close()
 

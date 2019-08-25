@@ -3,6 +3,7 @@ from led_patches.base import State
 import os
 import numpy as np
 import re
+import ctypes
 
 
 # detect and load patches
@@ -17,7 +18,8 @@ for name in patch_files:
 # detect OS and load visualization istead of hardware when on PC
 os_type = " ".join(os.uname())
 print("Current OS: %s" % os_type)
-if "raspberrypi" in os_type or "arm" in os_type:
+IS_RASPBERRY = "raspberrypi" in os_type or "arm" in os_type
+if IS_RASPBERRY:
     print("Loading on Raspberry pi, using pwm hardware.")
     from ledlib.neopixel import Adafruit_NeoPixel, ws
 else:
@@ -35,13 +37,20 @@ class LedInterface(object):
         self.length = length
         self.buffer = np.zeros((length, 3))
 
+        # allocate new array
+        self.raw_buffer = (ctypes.c_uint32 * self.length)()
+        ws.ws2811_channel_t_leds_set(self._channel, ctypes.byref(self.raw_buffer))
+
     def flush(self):
         """ Flush buffer to strip
         """
         buf = np.minimum(np.maximum(np.array(self.buffer * 255, np.uint32), 0), 255)
         packed_buf = (buf[:, 0] << 16) + (buf[:, 1] << 8) + buf[:, 2]
-        for x in range(self.length):
-            self._hw._led_data[x] = int(packed_buf[x])
+        # for x in range(self.length):
+            # self._hw._led_data[x] = int(packed_buf[x])
+
+        ctypes.memmove(ctypes.byref(self.raw_buffer), packed_buf, ctypes.sizeof(self.raw_buffer))
+
         self._hw.show()
 
     def __getitem__(self, idx):
