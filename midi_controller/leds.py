@@ -21,7 +21,8 @@ print("Current OS: %s" % os_type)
 IS_RASPBERRY = "raspberrypi" in os_type or "arm" in os_type
 if IS_RASPBERRY:
     print("Loading on Raspberry pi, using pwm hardware.")
-    from ledlib.neopixel import Adafruit_NeoPixel, ws
+    from ledlib.neopixel import Adafruit_NeoPixel
+    import ledlib._rpi_ws281x as ws
 else:
     print("Loading on dev PC, using pygame visualization.")
     from led_viz import Adafruit_NeoPixel_viz as Adafruit_NeoPixel, ws
