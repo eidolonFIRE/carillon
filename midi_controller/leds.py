@@ -39,7 +39,7 @@ class LedInterface(object):
 
         # allocate new array
         self.raw_buffer = (ctypes.c_uint32 * self.length)()
-        ws.ws2811_channel_t_leds_set(self._channel, ctypes.byref(self.raw_buffer))
+        ws.ws2811_channel_t_leds_set(self._hw._channel, ctypes.byref(self.raw_buffer))
 
     def flush(self):
         """ Flush buffer to strip
