@@ -2,7 +2,7 @@ from bells import BellsController
 from config import Config
 from leds import LightController
 from mido.sockets import PortServer
-from time import sleep, time
+from time import sleep
 import difflib
 import mido
 import multiprocessing as mp
@@ -175,10 +175,7 @@ def process_update_leds():
             msg = leds.midi_queue.get()
             msg.note = config.map_note(msg.note)
             leds.event(msg)
-        start = time()
         leds.step()
-        end = time()
-        print(end - start)
         sleep(1.0 / 100)
     leds.close()
 
