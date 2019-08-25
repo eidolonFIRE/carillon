@@ -84,5 +84,5 @@ class Config(object):
 
     def map_velocity(self, velocity):
         x = velocity / 127.0
-        y = x**2.0 * self.volume
+        y = x**1.5 * self.volume
         return min(0x7f, max(0, int(y * 127)))
